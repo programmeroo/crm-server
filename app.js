@@ -7,6 +7,7 @@ const { createSessionMiddleware } = require('./config/session');
 const { requireAuth, guestOnly } = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
 const contactRoutes = require('./routes/contacts');
+const workspaceRoutes = require('./routes/workspaces');
 const { getDb } = require('./config/database');
 
 const app = express();
@@ -55,5 +56,8 @@ app.get('/', (req, res) => {
 
 // Contacts
 app.use('/contacts', contactRoutes);
+
+// Workspaces
+app.use('/workspaces', workspaceRoutes);
 
 module.exports = app;

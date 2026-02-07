@@ -45,6 +45,20 @@ function initDb() {
       updated_at TEXT DEFAULT (datetime('now'))
     )
   `).run();
+
+  conn.prepare(`
+    CREATE TABLE IF NOT EXISTS workspaces (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      email_provider TEXT,
+      email_config TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `).run();
 }
 
 module.exports = { getDb, closeDb, initDb };

@@ -1,11 +1,18 @@
 const fs = require('fs');
 const path = require('path');
-const { getDb, closeDb, initDb } = require('../config/database');
-const User = require('../models/User');
 
 const TEST_DB_PATH = path.resolve(process.env.DATABASE_PATH);
 
+let User;
+
 beforeAll(() => {
+  // Clear module caches to ensure fresh database singleton
+  delete require.cache[require.resolve('../models/User')];
+  delete require.cache[require.resolve('../config/database')];
+
+  const { closeDb, initDb } = require('../config/database');
+  User = require('../models/User');
+
   closeDb();
   [TEST_DB_PATH, TEST_DB_PATH + '-wal', TEST_DB_PATH + '-shm'].forEach(f => {
     if (fs.existsSync(f)) fs.unlinkSync(f);
@@ -14,6 +21,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
+  const { closeDb } = require('../config/database');
   closeDb();
   [TEST_DB_PATH, TEST_DB_PATH + '-wal', TEST_DB_PATH + '-shm'].forEach(f => {
     if (fs.existsSync(f)) fs.unlinkSync(f);
