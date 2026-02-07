@@ -6,9 +6,13 @@ const TEST_DB_PATH = path.resolve(process.env.DATABASE_PATH);
 let User;
 
 beforeAll(() => {
-  // Clear module caches to ensure fresh database singleton
-  delete require.cache[require.resolve('../models/User')];
-  delete require.cache[require.resolve('../config/database')];
+  // Clear ALL project module caches to prevent stale database singleton references
+  // from other test files (contacts, workspaces, app) that ran before this one
+  Object.keys(require.cache).forEach(key => {
+    if (key.includes('crm-server') && !key.includes('node_modules') && !key.includes('setup.js')) {
+      delete require.cache[key];
+    }
+  });
 
   const { closeDb, initDb } = require('../config/database');
   User = require('../models/User');

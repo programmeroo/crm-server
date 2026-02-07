@@ -9,7 +9,7 @@ const { loadWorkspace, requireWorkspace } = require('./middleware/workspace');
 const authRoutes = require('./routes/auth');
 const contactRoutes = require('./routes/contacts');
 const workspaceRoutes = require('./routes/workspaces');
-const { getDb } = require('./config/database');
+const Contact = require('./models/Contact');
 
 const app = express();
 
@@ -54,9 +54,8 @@ app.get('/', (req, res) => {
   if (!req.workspace) {
     return res.render('index', { count: null });
   }
-  const db = getDb();
-  const stats = db.prepare('SELECT COUNT(*) as count FROM contacts').get();
-  res.render('index', { count: stats.count });
+  const count = Contact.count(req.workspace.id);
+  res.render('index', { count });
 });
 
 // Workspaces

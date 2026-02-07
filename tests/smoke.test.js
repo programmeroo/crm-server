@@ -60,7 +60,7 @@ describe('Smoke Tests', () => {
     const res = await agent
       .post('/contacts/add')
       .type('form')
-      .send({ name: 'Test User', email: 'test@example.com' });
+      .send({ first_name: 'Test', last_name: 'User', company: 'TestCo' });
 
     expect(res.status).toBe(302);
     expect(res.headers.location).toBe('/contacts');
@@ -69,13 +69,14 @@ describe('Smoke Tests', () => {
   test('GET /contacts shows the newly created contact', async () => {
     const res = await agent.get('/contacts');
     expect(res.status).toBe(200);
-    expect(res.text).toContain('Test User');
+    expect(res.text).toContain('Test');
+    expect(res.text).toContain('User');
   });
 
   test('POST /contacts/delete/:id removes the contact', async () => {
-    const { getDb } = require('../config/database');
-    const db = getDb();
-    const contact = db.prepare("SELECT id FROM contacts WHERE name = 'Test User'").get();
+    const Contact = require('../models/Contact');
+    const contacts = Contact.findByWorkspaceId(1);
+    const contact = contacts.find(c => c.first_name === 'Test');
 
     const res = await agent
       .post(`/contacts/delete/${contact.id}`)
@@ -86,7 +87,7 @@ describe('Smoke Tests', () => {
     expect(res.headers.location).toBe('/contacts');
 
     const check = await agent.get('/contacts');
-    expect(check.text).not.toContain('Test User');
+    expect(check.text).not.toContain('TestCo');
   });
 
   test('GET /help returns 200', async () => {
