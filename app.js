@@ -1,7 +1,13 @@
 require('dotenv/config');
 const express = require('express');
+const flash = require('connect-flash');
 const path = require('path');
-const { getDb, initDb } = require('./config/database');
+const { initDb } = require('./config/database');
+const { createSessionMiddleware } = require('./config/session');
+const { requireAuth, guestOnly } = require('./middleware/auth');
+const authRoutes = require('./routes/auth');
+const contactRoutes = require('./routes/contacts');
+const { getDb } = require('./config/database');
 
 const app = express();
 
@@ -15,8 +21,30 @@ app.set('views', path.join(__dirname, 'views'));
 // Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(createSessionMiddleware());
+app.use(flash());
 
-// ROUTES
+// Make flash messages available to all views
+app.use((req, res, next) => {
+  res.locals.success = req.flash('success');
+  res.locals.error = req.flash('error');
+  res.locals.user = null;
+  next();
+});
+
+// Auth routes (no auth required)
+app.get('/login', guestOnly, (req, res, next) => next());
+app.post('/login', guestOnly, (req, res, next) => next());
+app.use('/', authRoutes);
+
+// Static pages (no auth required)
+app.get('/help', (req, res) => res.render('help'));
+app.get('/feedback', (req, res) => res.render('feedback'));
+app.get('/privacy', (req, res) => res.render('privacy'));
+app.get('/terms', (req, res) => res.render('terms'));
+
+// --- All routes below require authentication ---
+app.use(requireAuth);
 
 // Dashboard
 app.get('/', (req, res) => {
@@ -25,50 +53,7 @@ app.get('/', (req, res) => {
   res.render('index', { count: stats.count });
 });
 
-// List contacts
-app.get('/contacts', (req, res) => {
-  const db = getDb();
-  const contacts = db.prepare('SELECT * FROM contacts ORDER BY name').all();
-  res.render('contacts', { contacts });
-});
-
-// Add contact
-app.post('/contacts/add', (req, res) => {
-  const db = getDb();
-  const { name, email } = req.body;
-  db.prepare('INSERT INTO contacts (name, email, last_contact) VALUES (?, ?, ?)').run(
-    name, email, new Date().toISOString()
-  );
-  res.redirect('/contacts');
-});
-
-// Edit page
-app.get('/contacts/edit/:id', (req, res) => {
-  const db = getDb();
-  const contact = db.prepare('SELECT * FROM contacts WHERE id = ?').get(req.params.id);
-  res.render('edit_contact', { contact });
-});
-
-// Update contact
-app.post('/contacts/update/:id', (req, res) => {
-  const db = getDb();
-  const { name, email } = req.body;
-  db.prepare('UPDATE contacts SET name = ?, email = ? WHERE id = ?')
-    .run(name, email, req.params.id);
-  res.redirect('/contacts');
-});
-
-// Delete contact
-app.post('/contacts/delete/:id', (req, res) => {
-  const db = getDb();
-  db.prepare('DELETE FROM contacts WHERE id = ?').run(req.params.id);
-  res.redirect('/contacts');
-});
-
-// Static pages
-app.get('/help', (req, res) => res.render('help'));
-app.get('/feedback', (req, res) => res.render('feedback'));
-app.get('/privacy', (req, res) => res.render('privacy'));
-app.get('/terms', (req, res) => res.render('terms'));
+// Contacts
+app.use('/contacts', contactRoutes);
 
 module.exports = app;

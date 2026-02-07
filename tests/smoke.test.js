@@ -1,45 +1,57 @@
 const request = require('supertest');
 const fs = require('fs');
 const path = require('path');
-const app = require('../app');
-const { getDb, closeDb } = require('../config/database');
+const { closeDb } = require('../config/database');
+const User = require('../models/User');
 
 const TEST_DB_PATH = path.resolve(process.env.DATABASE_PATH);
 
-beforeAll(() => {
-  // Start fresh: delete the test database if it exists
-  if (fs.existsSync(TEST_DB_PATH)) {
-    closeDb();
-    fs.unlinkSync(TEST_DB_PATH);
-  }
-  // Re-initialize by requiring app (initDb runs on import)
-  // Force a fresh connection after deleting the file
-  const { initDb } = require('../config/database');
-  initDb();
+let app;
+let agent;
+
+beforeAll(async () => {
+  closeDb();
+  [TEST_DB_PATH, TEST_DB_PATH + '-wal', TEST_DB_PATH + '-shm'].forEach(f => {
+    if (fs.existsSync(f)) fs.unlinkSync(f);
+  });
+  delete require.cache[require.resolve('../app')];
+  app = require('../app');
+
+  // Create a test user and log in
+  await User.create({
+    username: 'smokeuser',
+    password: 'smokepass',
+    displayName: 'Smoke User'
+  });
+
+  agent = request.agent(app);
+  await agent
+    .post('/login')
+    .type('form')
+    .send({ username: 'smokeuser', password: 'smokepass' });
 });
 
 afterAll(() => {
   closeDb();
-  // Clean up test database
-  if (fs.existsSync(TEST_DB_PATH)) {
-    fs.unlinkSync(TEST_DB_PATH);
-  }
+  [TEST_DB_PATH, TEST_DB_PATH + '-wal', TEST_DB_PATH + '-shm'].forEach(f => {
+    if (fs.existsSync(f)) fs.unlinkSync(f);
+  });
 });
 
 describe('Smoke Tests', () => {
   test('GET / returns 200 and contains Pi-CRM', async () => {
-    const res = await request(app).get('/');
+    const res = await agent.get('/');
     expect(res.status).toBe(200);
     expect(res.text).toContain('Pi-CRM');
   });
 
   test('GET /contacts returns 200', async () => {
-    const res = await request(app).get('/contacts');
+    const res = await agent.get('/contacts');
     expect(res.status).toBe(200);
   });
 
   test('POST /contacts/add creates a contact and redirects', async () => {
-    const res = await request(app)
+    const res = await agent
       .post('/contacts/add')
       .type('form')
       .send({ name: 'Test User', email: 'test@example.com' });
@@ -49,17 +61,17 @@ describe('Smoke Tests', () => {
   });
 
   test('GET /contacts shows the newly created contact', async () => {
-    const res = await request(app).get('/contacts');
+    const res = await agent.get('/contacts');
     expect(res.status).toBe(200);
     expect(res.text).toContain('Test User');
   });
 
   test('POST /contacts/delete/:id removes the contact', async () => {
-    // Find the contact we just created
+    const { getDb } = require('../config/database');
     const db = getDb();
     const contact = db.prepare("SELECT id FROM contacts WHERE name = 'Test User'").get();
 
-    const res = await request(app)
+    const res = await agent
       .post(`/contacts/delete/${contact.id}`)
       .type('form')
       .send();
@@ -67,8 +79,7 @@ describe('Smoke Tests', () => {
     expect(res.status).toBe(302);
     expect(res.headers.location).toBe('/contacts');
 
-    // Verify it's gone
-    const check = await request(app).get('/contacts');
+    const check = await agent.get('/contacts');
     expect(check.text).not.toContain('Test User');
   });
 
@@ -80,5 +91,11 @@ describe('Smoke Tests', () => {
   test('GET /feedback returns 200', async () => {
     const res = await request(app).get('/feedback');
     expect(res.status).toBe(200);
+  });
+
+  test('GET /login returns 200 for unauthenticated user', async () => {
+    const res = await request(app).get('/login');
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('Log In');
   });
 });
