@@ -180,3 +180,65 @@ describe('Workspace Isolation', () => {
     expect(stillExists).not.toBeNull();
   });
 });
+
+describe('Workspace Activation & Scoping', () => {
+  test('POST /workspaces/:id/activate sets active workspace', async () => {
+    const userA = User.findByUsername('wsUserA');
+    const workspaces = Workspace.findByUserId(userA.id);
+    const ws = workspaces[0];
+
+    const res = await agentA.post(`/workspaces/${ws.id}/activate`);
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/');
+
+    // Dashboard should now show workspace name in switcher
+    const dashboard = await agentA.get('/');
+    expect(dashboard.status).toBe(200);
+    expect(dashboard.text).toContain(ws.name);
+  });
+
+  test('User A cannot activate User B workspace', async () => {
+    const userB = User.findByUsername('wsUserB');
+    const bWorkspaces = Workspace.findByUserId(userB.id);
+    const bWs = bWorkspaces[0];
+
+    const res = await agentA.post(`/workspaces/${bWs.id}/activate`);
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/workspaces');
+  });
+
+  test('GET /contacts without active workspace redirects to /workspaces', async () => {
+    // Fresh agent with no workspace activated
+    const freshAgent = request.agent(app);
+    await freshAgent.post('/login').type('form').send({ username: 'wsUserA', password: 'passA' });
+
+    const res = await freshAgent.get('/contacts');
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/workspaces');
+  });
+
+  test('GET /contacts with active workspace returns 200', async () => {
+    // agentA already has an active workspace from earlier test
+    const res = await agentA.get('/contacts');
+    expect(res.status).toBe(200);
+  });
+
+  test('Switching workspaces updates context', async () => {
+    const userA = User.findByUsername('wsUserA');
+    // Create a second workspace to switch to
+    const ws2 = Workspace.create({ userId: userA.id, name: 'Second WS' });
+
+    await agentA.post(`/workspaces/${ws2.id}/activate`);
+
+    const dashboard = await agentA.get('/');
+    expect(dashboard.status).toBe(200);
+    expect(dashboard.text).toContain('Second WS');
+  });
+
+  test('Workspace list in switcher only shows own workspaces', async () => {
+    const dashboard = await agentB.get('/workspaces');
+    expect(dashboard.text).toContain('B Workspace');
+    expect(dashboard.text).not.toContain('Renamed Workspace');
+    expect(dashboard.text).not.toContain('Second WS');
+  });
+});
