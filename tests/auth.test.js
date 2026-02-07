@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { closeDb } = require('../config/database');
 const User = require('../models/User');
+const Workspace = require('../models/Workspace');
 
 const TEST_DB_PATH = path.resolve(process.env.DATABASE_PATH);
 
@@ -91,11 +92,16 @@ describe('Authenticated Access', () => {
   let agent;
 
   beforeAll(async () => {
+    const user = User.findByUsername('authuser');
+    const ws = Workspace.create({ userId: user.id, name: 'Auth Workspace' });
+
     agent = request.agent(app);
     await agent
       .post('/login')
       .type('form')
       .send({ username: 'authuser', password: 'authpass123' });
+
+    await agent.post(`/workspaces/${ws.id}/activate`);
   });
 
   test('GET / returns 200 when authenticated', async () => {
@@ -104,9 +110,22 @@ describe('Authenticated Access', () => {
     expect(res.text).toContain('Pi-CRM');
   });
 
-  test('GET /contacts returns 200 when authenticated', async () => {
+  test('GET /contacts returns 200 when authenticated with workspace', async () => {
     const res = await agent.get('/contacts');
     expect(res.status).toBe(200);
+  });
+
+  test('GET /contacts without workspace redirects to /workspaces', async () => {
+    // Use a fresh agent with auth but no workspace
+    const noWsAgent = request.agent(app);
+    await noWsAgent
+      .post('/login')
+      .type('form')
+      .send({ username: 'authuser', password: 'authpass123' });
+
+    const res = await noWsAgent.get('/contacts');
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/workspaces');
   });
 
   test('GET /login redirects to / when authenticated', async () => {

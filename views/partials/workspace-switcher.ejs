@@ -1,0 +1,33 @@
+<% if (typeof user !== 'undefined' && user) { %>
+<div class="relative" id="ws-switcher">
+    <button onclick="document.getElementById('ws-dropdown').classList.toggle('hidden')"
+            class="text-sm bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded transition flex items-center space-x-1">
+        <span>
+            <% if (typeof workspace !== 'undefined' && workspace) { %>
+                <%= workspace.name %>
+            <% } else { %>
+                Select Workspace
+            <% } %>
+        </span>
+        <svg class="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+    </button>
+    <div id="ws-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+        <% if (typeof workspaces !== 'undefined' && workspaces.length > 0) { %>
+            <% workspaces.forEach(ws => { %>
+                <form action="/workspaces/<%= ws.id %>/activate" method="POST" class="block">
+                    <button type="submit"
+                            class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition
+                                   <%= (typeof workspace !== 'undefined' && workspace && workspace.id === ws.id) ? 'font-bold bg-blue-50' : '' %>">
+                        <%= ws.name %>
+                    </button>
+                </form>
+            <% }) %>
+        <% } else { %>
+            <div class="px-4 py-2 text-sm text-slate-400">No workspaces yet</div>
+        <% } %>
+        <div class="border-t border-slate-200">
+            <a href="/workspaces" class="block px-4 py-2 text-sm text-blue-600 hover:bg-slate-50 transition">Manage Workspaces</a>
+        </div>
+    </div>
+</div>
+<% } %>

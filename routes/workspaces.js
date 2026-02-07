@@ -53,6 +53,18 @@ router.post('/:id', (req, res) => {
   res.redirect('/workspaces');
 });
 
+// Activate workspace
+router.post('/:id/activate', (req, res) => {
+  const workspace = Workspace.findById(req.params.id);
+  if (!workspace || workspace.user_id !== req.user.id) {
+    req.flash('error', 'Workspace not found');
+    return res.redirect('/workspaces');
+  }
+  req.session.activeWorkspaceId = workspace.id;
+  req.flash('success', `Switched to ${workspace.name}`);
+  res.redirect('/');
+});
+
 // Delete workspace
 router.post('/:id/delete', (req, res) => {
   const workspace = Workspace.findById(req.params.id);

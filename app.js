@@ -5,6 +5,7 @@ const path = require('path');
 const { initDb } = require('./config/database');
 const { createSessionMiddleware } = require('./config/session');
 const { requireAuth, guestOnly } = require('./middleware/auth');
+const { loadWorkspace, requireWorkspace } = require('./middleware/workspace');
 const authRoutes = require('./routes/auth');
 const contactRoutes = require('./routes/contacts');
 const workspaceRoutes = require('./routes/workspaces');
@@ -46,18 +47,22 @@ app.get('/terms', (req, res) => res.render('terms'));
 
 // --- All routes below require authentication ---
 app.use(requireAuth);
+app.use(loadWorkspace);
 
 // Dashboard
 app.get('/', (req, res) => {
+  if (!req.workspace) {
+    return res.render('index', { count: null });
+  }
   const db = getDb();
   const stats = db.prepare('SELECT COUNT(*) as count FROM contacts').get();
   res.render('index', { count: stats.count });
 });
 
-// Contacts
-app.use('/contacts', contactRoutes);
-
 // Workspaces
 app.use('/workspaces', workspaceRoutes);
+
+// Contacts (require active workspace)
+app.use('/contacts', requireWorkspace, contactRoutes);
 
 module.exports = app;

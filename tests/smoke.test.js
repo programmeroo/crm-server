@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { closeDb } = require('../config/database');
 const User = require('../models/User');
+const Workspace = require('../models/Workspace');
 
 const TEST_DB_PATH = path.resolve(process.env.DATABASE_PATH);
 
@@ -17,18 +18,23 @@ beforeAll(async () => {
   delete require.cache[require.resolve('../app')];
   app = require('../app');
 
-  // Create a test user and log in
-  await User.create({
+  // Create a test user, workspace, and log in
+  const user = await User.create({
     username: 'smokeuser',
     password: 'smokepass',
     displayName: 'Smoke User'
   });
+
+  const ws = Workspace.create({ userId: user.id, name: 'Smoke Workspace' });
 
   agent = request.agent(app);
   await agent
     .post('/login')
     .type('form')
     .send({ username: 'smokeuser', password: 'smokepass' });
+
+  // Activate the workspace
+  await agent.post(`/workspaces/${ws.id}/activate`);
 });
 
 afterAll(() => {
