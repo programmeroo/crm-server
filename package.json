@@ -8,9 +8,11 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "jest --forceExit --detectOpenHandles",
-    "typeorm": "typeorm-ts-node-commonjs"
+    "typeorm": "typeorm-ts-node-commonjs",
+    "seed": "ts-node src/scripts/seed.ts"
   },
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "connect-sqlite3": "^0.9.15",
     "dotenv": "^16.4.7",
     "ejs": "^3.1.10",
@@ -25,6 +27,7 @@
     "winston": "^3.17.0"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/express": "^5.0.0",
     "@types/express-session": "^1.18.1",
     "@types/jest": "^29.5.14",

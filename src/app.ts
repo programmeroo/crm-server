@@ -6,6 +6,8 @@ import path from 'path';
 import { DataSource } from 'typeorm';
 import { env } from './config/env';
 import { errorHandler } from './middlewares/errorHandler';
+import { AuthService } from './services/AuthService';
+import { AuthController } from './controllers/AuthController';
 
 export function createApp(dataSource: DataSource): express.Application {
   const app = express();
@@ -57,12 +59,19 @@ export function createApp(dataSource: DataSource): express.Application {
   // Static files
   app.use(express.static(path.join(__dirname, '..', 'public')));
 
+  // --- Services ---
+  const authService = new AuthService(dataSource);
+
   // --- Routes ---
 
   // Health check
   app.get('/health', (_req, res) => {
     res.json({ data: { status: 'ok' }, error: null });
   });
+
+  // Auth
+  const authController = new AuthController(authService);
+  app.use('/api/auth', authController.router);
 
   // Error handler (must be last)
   app.use(errorHandler);
