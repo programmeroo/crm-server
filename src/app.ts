@@ -8,6 +8,7 @@ import { env } from './config/env';
 import { errorHandler } from './middlewares/errorHandler';
 import { AuthService } from './services/AuthService';
 import { AuthController } from './controllers/AuthController';
+import { createApiKeyAuth } from './middlewares/apiKeyAuth';
 
 export function createApp(dataSource: DataSource): express.Application {
   const app = express();
@@ -72,6 +73,21 @@ export function createApp(dataSource: DataSource): express.Application {
   // Auth
   const authController = new AuthController(authService);
   app.use('/api/auth', authController.router);
+
+  // API key auth for all /api/ routes (except /api/auth)
+  app.use('/api', createApiKeyAuth(authService));
+
+  // Protected test route (requires API key)
+  app.get('/api/protected', (req, res, next) => {
+    if (!req.apiUser) {
+      next(new (require('./errors/AppError').AppError)('UNAUTHORIZED', 'API key required', 401));
+      return;
+    }
+    res.json({
+      data: { user: req.apiUser.email, scopes: req.apiScopes },
+      error: null,
+    });
+  });
 
   // Error handler (must be last)
   app.use(errorHandler);
