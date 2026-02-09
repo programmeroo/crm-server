@@ -8,8 +8,10 @@ import { env } from './config/env';
 import { errorHandler } from './middlewares/errorHandler';
 import { AuthService } from './services/AuthService';
 import { AuditService } from './services/AuditService';
+import { WorkspaceService } from './services/WorkspaceService';
 import { AuthController } from './controllers/AuthController';
 import { AuditController } from './controllers/AuditController';
+import { WorkspaceController } from './controllers/WorkspaceController';
 import { createApiKeyAuth } from './middlewares/apiKeyAuth';
 import { createAuditMiddleware } from './middlewares/auditMiddleware';
 
@@ -66,6 +68,7 @@ export function createApp(dataSource: DataSource): express.Application {
   // --- Services ---
   const authService = new AuthService(dataSource);
   const auditService = new AuditService(dataSource);
+  const workspaceService = new WorkspaceService(dataSource);
 
   // Audit middleware (cross-cutting, before routes)
   app.use(createAuditMiddleware(auditService));
@@ -95,6 +98,10 @@ export function createApp(dataSource: DataSource): express.Application {
       error: null,
     });
   });
+
+  // Workspaces
+  const workspaceController = new WorkspaceController(workspaceService);
+  app.use('/api/workspaces', workspaceController.router);
 
   // Audit logs
   const auditController = new AuditController(auditService);
