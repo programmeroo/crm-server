@@ -237,7 +237,7 @@ CREATE INDEX idx_workspace_email_providers_workspace_id ON workspace_email_provi
 | 3 | API Keys & Security Middleware | complete |
 | 4 | Audit Logging (cross-cutting) | complete |
 | 5 | Workspaces | complete |
-| 6 | Base Contacts | not started |
+| 6 | Base Contacts | complete |
 | 7 | Contact Lists | not started |
 | 8 | Custom Fields (EAV) | not started |
 | 9 | Contact Merge | not started |
