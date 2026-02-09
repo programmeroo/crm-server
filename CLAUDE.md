@@ -232,10 +232,10 @@ CREATE INDEX idx_workspace_email_providers_workspace_id ON workspace_email_provi
 
 | # | Prompt | Status |
 |---|--------|--------|
-| 1 | Setup & Boilerplate | not started |
-| 2 | Users & Session Auth | not started |
-| 3 | API Keys & Security Middleware | not started |
-| 4 | Audit Logging (cross-cutting) | not started |
+| 1 | Setup & Boilerplate | complete |
+| 2 | Users & Session Auth | complete |
+| 3 | API Keys & Security Middleware | complete |
+| 4 | Audit Logging (cross-cutting) | complete |
 | 5 | Workspaces | not started |
 | 6 | Base Contacts | not started |
 | 7 | Contact Lists | not started |
@@ -263,4 +263,8 @@ CREATE INDEX idx_workspace_email_providers_workspace_id ON workspace_email_provi
 
 Record any changes from the plan here as they happen during implementation.
 
-(none yet)
+- WSL bash commands require `wsl -d Ubuntu -- bash -ic "source ~/.nvm/nvm.sh && ..."` to load nvm/node
+- express-rate-limit v7: `max: 0` blocks all requests (not disables). Skip middleware entirely in test mode instead.
+- connect-sqlite3 has no @types — custom declaration at src/types/connect-sqlite3.d.ts
+- Audit middleware uses req.originalUrl (not req.path) because Express sub-routers modify req.path
+- Audit middleware captures session userId before routing since logout destroys session before res.json

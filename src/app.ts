@@ -7,8 +7,11 @@ import { DataSource } from 'typeorm';
 import { env } from './config/env';
 import { errorHandler } from './middlewares/errorHandler';
 import { AuthService } from './services/AuthService';
+import { AuditService } from './services/AuditService';
 import { AuthController } from './controllers/AuthController';
+import { AuditController } from './controllers/AuditController';
 import { createApiKeyAuth } from './middlewares/apiKeyAuth';
+import { createAuditMiddleware } from './middlewares/auditMiddleware';
 
 export function createApp(dataSource: DataSource): express.Application {
   const app = express();
@@ -62,6 +65,10 @@ export function createApp(dataSource: DataSource): express.Application {
 
   // --- Services ---
   const authService = new AuthService(dataSource);
+  const auditService = new AuditService(dataSource);
+
+  // Audit middleware (cross-cutting, before routes)
+  app.use(createAuditMiddleware(auditService));
 
   // --- Routes ---
 
@@ -88,6 +95,10 @@ export function createApp(dataSource: DataSource): express.Application {
       error: null,
     });
   });
+
+  // Audit logs
+  const auditController = new AuditController(auditService);
+  app.use('/api/audit-logs', auditController.router);
 
   // Error handler (must be last)
   app.use(errorHandler);
