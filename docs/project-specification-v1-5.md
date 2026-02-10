@@ -114,8 +114,10 @@ The implementation order remains similar, but Prompt 5 (Workspaces) and Prompt 6
 | 3 | API Keys & Security | done |
 | 4 | Audit Logging | done |
 | 5 | Workspaces | done |
-| 6 | Base Contacts (v1.5) | needs update |
-| 7 | Contact Lists | needs update |
-| ... | ... | ... |
+| 6 | Base Contacts (v1.5) | done |
+| 7 | Contact Lists | done |
+| 8 | Custom Fields (EAV) | done |
+| 9 | Templates & AI Generation | done |
+| 10 | Campaigns | not started |
 
 [Detailed prompts follow in the prompt-plan-v1-5.md file]
