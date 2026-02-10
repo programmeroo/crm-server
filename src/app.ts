@@ -12,12 +12,14 @@ import { WorkspaceService } from './services/WorkspaceService';
 import { ContactService } from './services/ContactService';
 import { ListService } from './services/ListService';
 import { CustomFieldService } from './services/CustomFieldService';
+import { TemplateService } from './services/TemplateService';
 import { AuthController } from './controllers/AuthController';
 import { AuditController } from './controllers/AuditController';
 import { WorkspaceController } from './controllers/WorkspaceController';
 import { ContactController } from './controllers/ContactController';
 import { ListController } from './controllers/ListController';
 import { CustomFieldController } from './controllers/CustomFieldController';
+import { TemplateController } from './controllers/TemplateController';
 import { DashboardController } from './controllers/DashboardController';
 import { ContactUIController } from './controllers/ContactUIController';
 import { WorkspaceUIController } from './controllers/WorkspaceUIController';
@@ -85,6 +87,7 @@ export function createApp(dataSource: DataSource): express.Application {
   const contactService = new ContactService(dataSource);
   const listService = new ListService(dataSource);
   const customFieldService = new CustomFieldService(dataSource);
+  const templateService = new TemplateService(dataSource);
 
   // Audit middleware (cross-cutting, before routes)
   app.use(createAuditMiddleware(auditService));
@@ -182,6 +185,10 @@ export function createApp(dataSource: DataSource): express.Application {
   // Custom Fields
   const customFieldController = new CustomFieldController(customFieldService, contactService);
   app.use('/api/custom-fields', customFieldController.router);
+
+  // Templates
+  const templateController = new TemplateController(templateService, workspaceService);
+  app.use('/api/templates', templateController.router);
 
   // Audit logs
   const auditController = new AuditController(auditService);

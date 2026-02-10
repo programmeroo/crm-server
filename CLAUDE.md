@@ -113,13 +113,14 @@ CREATE TABLE contact_list_assignments (
   PRIMARY KEY (contact_id, list_id)
 );
 
--- Templates
+-- Templates (v1.5: INTEGER PKs, template_type field)
 CREATE TABLE templates (
-  id            TEXT PRIMARY KEY,
-  workspace_id  TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  workspace_id  INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   name          TEXT NOT NULL,
+  template_type TEXT NOT NULL CHECK(template_type IN ('html','text','mixed')) DEFAULT 'html',
   subject       TEXT,
-  body_html     TEXT NOT NULL,
+  body          TEXT NOT NULL,
   preheader     TEXT,
   signature     TEXT,
   created_at    TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -241,7 +242,7 @@ CREATE INDEX idx_workspace_email_providers_workspace_id ON workspace_email_provi
 | 6 | Base Contacts (v1.5) | complete |
 | 7 | Contact Lists | complete |
 | 8 | Custom Fields (EAV) | complete |
-| 9 | Templates | not started |
+| 9 | Templates & AI Generation | complete |
 | 10 | Campaigns | not started |
 | ... | ... | ... |
 | 15 | Dashboard Layout & Auth Views | complete (matches wireframe) |
@@ -304,3 +305,12 @@ Record any changes from the plan here as they happen during implementation.
 - **Dashboard Design**: AI Insights intentionally compact (white bg, 2 insights max, "View All" link) - documented in project-specification-v1-5.md
 - **Contacts List**: Fully redesigned to match wireframe - proper columns, filters, bulk actions, action icons
 - **Testing Strategy**: Per user request, focus on app functionality first, defer test fixes (UUID→Integer conversion)
+- **Prompt 9: Templates & AI Generation**: Complete
+  - Entity: `Template.entity.ts` (INTEGER PK, workspace-scoped)
+  - Three template types: `html`, `text`, `mixed` (for HTML with embedded images)
+  - Service: `TemplateService.ts` with CRUD + `generateWithAI()` method using OpenAI Chat API
+  - Controller: `TemplateController.ts` with REST endpoints (GET, POST, PUT, DELETE, POST /generate)
+  - Tests: `template.test.ts` with 19 passing tests (service + API coverage, workspace isolation, duplicate detection, AI generation)
+  - AI Integration: Uses OpenAI GPT-4 with JSON mode for structured responses. Gracefully handles missing API key (only blocks AI generation, not CRUD)
+  - OpenAI package added to dependencies (`npm install openai`)
+  - Environment: `env.ts` updated with `openaiApiKey` field
