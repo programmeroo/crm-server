@@ -1,5 +1,4 @@
 import { DataSource, Repository } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
 import { Workspace } from '../entities/Workspace.entity';
 import { AppError } from '../errors/AppError';
 import { logger } from '../config/logger';
@@ -11,7 +10,7 @@ export class WorkspaceService {
     this.repository = this.dataSource.getRepository(Workspace);
   }
 
-  async create(userId: string, name: string): Promise<Workspace> {
+  async create(userId: number, name: string): Promise<Workspace> {
     const existing = await this.repository.findOne({
       where: { user_id: userId, name },
     });
@@ -20,7 +19,6 @@ export class WorkspaceService {
     }
 
     const workspace = this.repository.create({
-      id: uuidv4(),
       user_id: userId,
       name,
     });
@@ -30,18 +28,18 @@ export class WorkspaceService {
     return saved;
   }
 
-  async listByUser(userId: string): Promise<Workspace[]> {
+  async listByUser(userId: number): Promise<Workspace[]> {
     return this.repository.find({
       where: { user_id: userId },
       order: { created_at: 'DESC' },
     });
   }
 
-  async findById(id: string): Promise<Workspace | null> {
+  async findById(id: number): Promise<Workspace | null> {
     return this.repository.findOne({ where: { id } });
   }
 
-  async update(id: string, userId: string, name: string): Promise<Workspace> {
+  async update(id: number, userId: number, name: string): Promise<Workspace> {
     const workspace = await this.repository.findOne({ where: { id } });
     if (!workspace) {
       throw new AppError('NOT_FOUND', 'Workspace not found', 404);
@@ -63,7 +61,7 @@ export class WorkspaceService {
     return saved;
   }
 
-  async delete(id: string, userId: string): Promise<void> {
+  async delete(id: number, userId: number): Promise<void> {
     const workspace = await this.repository.findOne({ where: { id } });
     if (!workspace) {
       throw new AppError('NOT_FOUND', 'Workspace not found', 404);

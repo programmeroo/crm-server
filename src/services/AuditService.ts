@@ -1,13 +1,12 @@
 import { DataSource, Repository } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
 import { AuditLog } from '../entities/AuditLog.entity';
 import { logger } from '../config/logger';
 
 interface LogActionParams {
-  userId: string | null;
+  userId: number | null;
   action: string;
   entityType?: string;
-  entityId?: string;
+  entityId?: number;
   details?: string;
   ipAddress?: string;
 }
@@ -17,7 +16,7 @@ interface GetLogsParams {
   offset?: number;
   action?: string;
   entityType?: string;
-  userId?: string;
+  userId?: number;
 }
 
 export class AuditService {
@@ -29,7 +28,6 @@ export class AuditService {
 
   async logAction(params: LogActionParams): Promise<AuditLog> {
     const log = this.repository.create({
-      id: uuidv4(),
       user_id: params.userId,
       action: params.action,
       entity_type: params.entityType || null,
@@ -66,14 +64,14 @@ export class AuditService {
     return qb.getMany();
   }
 
-  async getLogsByEntity(entityType: string, entityId: string): Promise<AuditLog[]> {
+  async getLogsByEntity(entityType: string, entityId: number): Promise<AuditLog[]> {
     return this.repository.find({
       where: { entity_type: entityType, entity_id: entityId },
       order: { timestamp: 'DESC' },
     });
   }
 
-  async getLogsByUser(userId: string): Promise<AuditLog[]> {
+  async getLogsByUser(userId: number): Promise<AuditLog[]> {
     return this.repository.find({
       where: { user_id: userId },
       order: { timestamp: 'DESC' },

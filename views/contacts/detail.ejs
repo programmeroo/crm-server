@@ -1,0 +1,790 @@
+<div class="max-w-5xl mx-auto space-y-6">
+    <!-- Breadcrumbs -->
+    <nav class="flex text-sm font-medium text-slate-500 mb-2">
+        <a href="/contacts" class="hover:text-blue-600 transition-colors">Contacts</a>
+        <span class="mx-2 text-slate-300">/</span>
+        <span class="text-slate-900">
+            <%= contact.first_name %>
+                <%= contact.last_name %>
+        </span>
+    </nav>
+
+    <!-- Edit Contact Modal -->
+    <div id="edit-contact-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title"
+        role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" aria-hidden="true"
+                onclick="toggleModal('edit-contact-modal')"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div
+                class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-100">
+                <div class="bg-white px-8 pt-8 pb-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-slate-900" id="modal-title">Edit Contact</h3>
+                        <button onclick="toggleModal('edit-contact-modal')"
+                            class="text-slate-400 hover:text-slate-600 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div id="edit-modal-error"
+                        class="hidden mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl font-medium">
+                    </div>
+
+                    <form id="edit-contact-form" class="space-y-5">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label
+                                    class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">First
+                                    Name</label>
+                                <input type="text" name="firstName" value="<%= contact.first_name || '' %>"
+                                    class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Last
+                                    Name</label>
+                                <input type="text" name="lastName" value="<%= contact.last_name || '' %>"
+                                    class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Email
+                                Address</label>
+                            <input type="email" name="primaryEmail" value="<%= contact.primary_email || '' %>" placeholder="name@example.com"
+                                class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label
+                                    class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Phone</label>
+                                <input type="text" name="primaryPhone" value="<%= contact.primary_phone || '' %>"
+                                    class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Company</label>
+                                <input type="text" name="company" value="<%= contact.company || '' %>"
+                                    class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Assign
+                                to Workspace</label>
+                            <select name="workspaceId"
+                                class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm text-slate-600">
+                                <option value="">None (Unassigned)</option>
+                                <% workspaces.forEach(ws => { %>
+                                    <option value="<%= ws.id %>" <%= contact.workspace_id === ws.id ? 'selected' : '' %>>
+                                        <%= ws.name %>
+                                    </option>
+                                <% }) %>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="bg-slate-50 px-8 py-6 flex flex-row-reverse gap-3">
+                    <button form="edit-contact-form" type="submit" id="edit-save-btn"
+                        class="inline-flex justify-center px-6 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md active:scale-95">
+                        Save Changes
+                    </button>
+                    <button onclick="toggleModal('edit-contact-modal')"
+                        class="inline-flex justify-center px-6 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-xl hover:bg-slate-50 transition-all">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Fields Modal -->
+    <div id="custom-fields-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title"
+        role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" aria-hidden="true"
+                onclick="toggleModal('custom-fields-modal')"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div
+                class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-100">
+                <div class="bg-white px-8 pt-8 pb-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-slate-900">Edit Custom Fields</h3>
+                        <button onclick="toggleModal('custom-fields-modal')"
+                            class="text-slate-400 hover:text-slate-600 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div id="custom-fields-error"
+                        class="hidden mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl font-medium">
+                    </div>
+
+                    <form id="custom-fields-form" class="space-y-4">
+                        <% if (customFieldDefinitions.length === 0) { %>
+                            <div class="text-center py-8">
+                                <p class="text-sm text-slate-400 italic">No field definitions available. Create custom field definitions first.</p>
+                            </div>
+                        <% } else { %>
+                            <% customFieldDefinitions.forEach(def => { %>
+                                <%  const existingValue = customFieldValues.find(v => v.field_name === def.field_name); %>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                                        <%= def.label %><%= def.is_required ? ' *' : '' %>
+                                    </label>
+                                    <% if (def.field_type === 'textarea') { %>
+                                        <textarea name="field_<%= def.field_name %>" data-field-name="<%= def.field_name %>" data-field-type="<%= def.field_type %>"
+                                            class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm"
+                                            rows="3"><%= existingValue ? existingValue.field_value : (def.default_value || '') %></textarea>
+                                    <% } else { %>
+                                        <input
+                                            type="<%= def.field_type === 'number' ? 'number' : (def.field_type === 'date' ? 'date' : (def.field_type === 'email' ? 'email' : (def.field_type === 'url' ? 'url' : 'text'))) %>"
+                                            name="field_<%= def.field_name %>"
+                                            data-field-name="<%= def.field_name %>"
+                                            data-field-type="<%= def.field_type %>"
+                                            value="<%= existingValue ? existingValue.field_value : (def.default_value || '') %>"
+                                            <%= def.is_required ? 'required' : '' %>
+                                            class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
+                                    <% } %>
+                                </div>
+                            <% }) %>
+                        <% } %>
+                    </form>
+                </div>
+                <div class="bg-slate-50 px-8 py-6 flex flex-row-reverse gap-3">
+                    <button form="custom-fields-form" type="submit" id="custom-fields-save-btn"
+                        class="inline-flex justify-center px-6 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md active:scale-95">
+                        Save Fields
+                    </button>
+                    <button onclick="toggleModal('custom-fields-modal')"
+                        class="inline-flex justify-center px-6 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-xl hover:bg-slate-50 transition-all">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Field Definitions Modal -->
+    <div id="manage-fields-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title"
+        role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" aria-hidden="true"
+                onclick="toggleModal('manage-fields-modal')"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div
+                class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full border border-slate-100">
+                <div class="bg-white px-8 pt-8 pb-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-slate-900">Manage Field Definitions</h3>
+                        <button onclick="toggleModal('manage-fields-modal')"
+                            class="text-slate-400 hover:text-slate-600 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Existing Definitions -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">Existing Fields</h4>
+                        <div id="existing-definitions" class="space-y-2 max-h-60 overflow-y-auto">
+                            <% if (customFieldDefinitions.length === 0) { %>
+                                <p class="text-sm text-slate-400 italic">No field definitions yet.</p>
+                            <% } else { %>
+                                <% customFieldDefinitions.forEach(def => { %>
+                                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                        <div>
+                                            <div class="font-semibold text-slate-900"><%= def.label %></div>
+                                            <div class="text-xs text-slate-500">Type: <%= def.field_type %> | Field name: <%= def.field_name %></div>
+                                        </div>
+                                        <span class="text-xs text-slate-400"><%= def.workspace_id ? 'Workspace' : 'User-global' %></span>
+                                    </div>
+                                <% }) %>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <hr class="my-6 border-slate-200">
+
+                    <!-- Add New Definition Form -->
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">Add New Field</h4>
+                        <div id="add-definition-error"
+                            class="hidden mb-4 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl font-medium">
+                        </div>
+                        <form id="add-definition-form" class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Field Name *</label>
+                                    <input type="text" name="fieldName" required placeholder="e.g., birthday"
+                                        class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
+                                    <p class="text-xs text-slate-400 mt-1">Lowercase, no spaces (use underscores)</p>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Display Label *</label>
+                                    <input type="text" name="label" required placeholder="e.g., Birthday"
+                                        class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Field Type</label>
+                                    <select name="fieldType"
+                                        class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm text-slate-600">
+                                        <option value="text">Text</option>
+                                        <option value="textarea">Textarea</option>
+                                        <option value="number">Number</option>
+                                        <option value="date">Date</option>
+                                        <option value="email">Email</option>
+                                        <option value="url">URL</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Scope</label>
+                                    <select name="workspaceId"
+                                        class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm text-slate-600">
+                                        <option value="">User-global (all workspaces)</option>
+                                        <% workspaces.forEach(ws => { %>
+                                            <option value="<%= ws.id %>" <%= contact.workspace_id === ws.id ? 'selected' : '' %>><%= ws.name %></option>
+                                        <% }) %>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Default Value</label>
+                                <input type="text" name="defaultValue" placeholder="Optional"
+                                    class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="isRequired" id="isRequired" value="1"
+                                    class="rounded text-blue-600 focus:ring-blue-500 border-slate-300">
+                                <label for="isRequired" class="ml-2 text-sm font-medium text-slate-700">Required field</label>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="bg-slate-50 px-8 py-6 flex flex-row-reverse gap-3">
+                    <button form="add-definition-form" type="submit" id="add-definition-btn"
+                        class="inline-flex justify-center px-6 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md active:scale-95">
+                        Add Field Definition
+                    </button>
+                    <button onclick="toggleModal('manage-fields-modal')"
+                        class="inline-flex justify-center px-6 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-xl hover:bg-slate-50 transition-all">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div class="flex items-center gap-5">
+            <div
+                class="h-20 w-20 bg-blue-600 text-white rounded-2xl flex items-center justify-center text-3xl font-bold shadow-lg shadow-blue-200">
+                <%= contact.first_name ? contact.first_name[0] : '' %>
+                    <%= contact.last_name ? contact.last_name[0] : '' %>
+            </div>
+            <div>
+                <h1 class="text-3xl font-bold text-slate-900">
+                    <%= contact.first_name %>
+                        <%= contact.last_name %>
+                </h1>
+                <div class="flex flex-wrap items-center gap-3 mt-2">
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700 uppercase tracking-wider">Active</span>
+                    <% if (contact.workspace_id) { %>
+                        <% const ws=workspaces.find(w=> w.id === contact.workspace_id); %>
+                            <span
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 uppercase tracking-wider">
+                                <%= ws ? ws.name : 'Unknown' %>
+                            </span>
+                            <% } else { %>
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700 uppercase tracking-wider">Unassigned</span>
+                                <% } %>
+                                    <% if (contact.company) { %>
+                                        <span class="text-sm text-slate-500 font-medium flex items-center">
+                                            <svg class="w-4 h-4 mr-1.5 text-slate-400" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                                                </path>
+                                            </svg>
+                                            <%= contact.company %>
+                                        </span>
+                                        <% } %>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="toggleModal('edit-contact-modal')"
+                class="inline-flex items-center px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-xl hover:bg-slate-50 transition-all shadow-sm">
+                Edit
+            </button>
+            <button onclick="deleteContact()"
+                class="inline-flex items-center px-4 py-2.5 bg-white border border-red-200 text-red-600 text-sm font-bold rounded-xl hover:bg-red-50 transition-all shadow-sm">
+                Delete
+            </button>
+            <button
+                class="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md">
+                Send Message
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Details Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h2 class="font-bold text-slate-900">Contact Information</h2>
+                </div>
+                <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Email
+                            Address</label>
+                        <div class="text-slate-900 font-medium">
+                            <%= contact.primary_email || '—' %>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Phone
+                            Number</label>
+                        <div class="text-slate-900 font-medium">
+                            <%= contact.primary_phone || '—' %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Fields -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h2 class="font-bold text-slate-900">Custom Fields</h2>
+                    <div class="flex gap-2">
+                        <button onclick="toggleModal('manage-fields-modal')" class="text-slate-600 text-xs font-bold hover:underline">Manage Definitions</button>
+                        <button onclick="toggleModal('custom-fields-modal')" class="text-blue-600 text-xs font-bold hover:underline">Edit Values</button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div id="custom-fields-display" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <% if (customFieldValues.length === 0) { %>
+                            <div class="col-span-2 text-center py-8">
+                                <p class="text-sm text-slate-400 italic">No custom fields yet. Click "Edit Fields" to add some.</p>
+                            </div>
+                        <% } else { %>
+                            <% customFieldValues.forEach(field => { %>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5"><%= field.field_name %></label>
+                                    <div class="text-slate-900 font-medium"><%= field.field_value || '—' %></div>
+                                </div>
+                            <% }) %>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Log (Mock) -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                    <h2 class="font-bold text-slate-900">Recent Activity</h2>
+                </div>
+                <div class="p-6 text-center">
+                    <div class="max-w-xs mx-auto py-8">
+                        <div class="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-slate-900 font-semibold italic text-sm text-slate-400">Activity logging features
+                            coming soon in Phase 6...</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Info -->
+        <div class="space-y-6">
+            <!-- Workspace Assignment -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="font-bold text-slate-900 mb-4">Workspace</h3>
+                <div class="space-y-4">
+                    <select id="workspace-select"
+                        class="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm text-slate-700">
+                        <option value="">Unassigned</option>
+                        <% workspaces.forEach(ws=> { %>
+                            <option value="<%= ws.id %>" <%=contact.workspace_id===ws.id ? 'selected' : '' %>><%=
+                                    ws.name %>
+                            </option>
+                            <% }) %>
+                    </select>
+                    <button onclick="updateWorkspace()"
+                        class="w-full py-2 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition-all">
+                        Update Assignment
+                    </button>
+                    <p class="text-[11px] text-slate-400 leading-relaxed italic">
+                        Assigning to a workspace allows you to include this contact in workspace-specific automation and
+                        campaigns.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Lists -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-slate-900">Lists</h3>
+                    <% if (contact.workspace_id && availableLists.length > 0) { %>
+                        <button onclick="toggleModal('add-list-modal')" class="text-blue-600 font-bold text-xs hover:underline">Add to List</button>
+                    <% } %>
+                </div>
+                <div class="space-y-3">
+                    <% if (!contact.workspace_id) { %>
+                        <div class="text-sm text-slate-400 italic bg-orange-50 border border-orange-200 rounded-lg p-3">
+                            Assign this contact to a workspace first to use lists.
+                        </div>
+                    <% } else if (contactLists.length === 0) { %>
+                        <div class="text-sm text-slate-400 italic">No list assignments yet.</div>
+                    <% } else { %>
+                        <div class="flex flex-wrap gap-2">
+                            <% contactLists.forEach(list => { %>
+                                <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-semibold border border-blue-200">
+                                    <span><%= list.name %></span>
+                                    <% if (list.is_primary) { %>
+                                        <span class="text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded">PRIMARY</span>
+                                    <% } %>
+                                    <button onclick="removeFromList(<%= list.id %>)" class="text-blue-600 hover:text-blue-800">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            <% }) %>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add to List Modal -->
+<div id="add-list-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title"
+    role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" aria-hidden="true"
+            onclick="toggleModal('add-list-modal')"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div
+            class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full border border-slate-100">
+            <div class="bg-white px-8 pt-8 pb-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-slate-900">Add to List</h3>
+                    <button onclick="toggleModal('add-list-modal')"
+                        class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <div id="add-list-error"
+                    class="hidden mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl font-medium">
+                </div>
+
+                <div class="space-y-3">
+                    <% if (availableLists.length === 0) { %>
+                        <p class="text-sm text-slate-400 italic">No lists available for this workspace.</p>
+                    <% } else { %>
+                        <% availableLists.forEach(list => { %>
+                            <% const isAssigned = contactLists.some(cl => cl.id === list.id); %>
+                            <button onclick="addToList(<%= list.id %>)"
+                                <%= isAssigned ? 'disabled' : '' %>
+                                class="w-full text-left px-4 py-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 rounded-xl transition-all <%= isAssigned ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-300' %>">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-semibold text-slate-900"><%= list.name %></div>
+                                        <% if (list.is_primary) { %>
+                                            <span class="text-xs text-blue-600 font-bold">Primary List</span>
+                                        <% } %>
+                                    </div>
+                                    <% if (isAssigned) { %>
+                                        <span class="text-xs text-slate-400">Already assigned</span>
+                                    <% } else { %>
+                                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                        </svg>
+                                    <% } %>
+                                </div>
+                            </button>
+                        <% }) %>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                const errorDiv = document.getElementById('edit-modal-error');
+                if (errorDiv) errorDiv.classList.add('hidden');
+            }
+        }
+    }
+
+    const editForm = document.getElementById('edit-contact-form');
+    const editSaveBtn = document.getElementById('edit-save-btn');
+    const editModalError = document.getElementById('edit-modal-error');
+
+    if (editForm) {
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            editModalError.classList.add('hidden');
+            editSaveBtn.disabled = true;
+            editSaveBtn.innerText = 'Saving...';
+
+            const formData = new FormData(editForm);
+            const data = Object.fromEntries(formData.entries());
+
+            // Handle empty fields and numbers
+            if (!data.workspaceId) data.workspaceId = null;
+            else data.workspaceId = Number(data.workspaceId);
+
+            try {
+                const response = await fetch('/api/contacts/<%= contact.id %>', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    editModalError.innerText = result.error?.message || 'Failed to update contact.';
+                    editModalError.classList.remove('hidden');
+                }
+            } catch (err) {
+                editModalError.innerText = 'A network error occurred.';
+                editModalError.classList.remove('hidden');
+            } finally {
+                editSaveBtn.disabled = false;
+                editSaveBtn.innerText = 'Save Changes';
+            }
+        });
+    }
+
+    async function deleteContact() {
+        if (!confirm('Are you sure you want to delete this contact? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/contacts/<%= contact.id %>', {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                window.location.href = '/contacts';
+            } else {
+                const result = await response.json();
+                alert(result.error?.message || 'Failed to delete contact.');
+            }
+        } catch (err) {
+            alert('A network error occurred.');
+        }
+    }
+
+    async function updateWorkspace() {
+        const select = document.getElementById('workspace-select');
+        if (!select) return;
+
+        const workspaceId = select.value ? Number(select.value) : null;
+
+        try {
+            const response = await fetch('/api/contacts/<%= contact.id %>', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ workspaceId })
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const result = await response.json();
+                alert(result.error?.message || 'Failed to update workspace assignment.');
+            }
+        } catch (err) {
+            alert('A network error occurred.');
+        }
+    }
+
+    // Add Field Definition
+    const addDefinitionForm = document.getElementById('add-definition-form');
+    const addDefinitionBtn = document.getElementById('add-definition-btn');
+    const addDefinitionError = document.getElementById('add-definition-error');
+
+    if (addDefinitionForm) {
+        addDefinitionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            addDefinitionError.classList.add('hidden');
+            addDefinitionBtn.disabled = true;
+            addDefinitionBtn.innerText = 'Creating...';
+
+            const formData = new FormData(addDefinitionForm);
+            const data = {
+                fieldName: formData.get('fieldName'),
+                label: formData.get('label'),
+                fieldType: formData.get('fieldType'),
+                workspaceId: formData.get('workspaceId') ? Number(formData.get('workspaceId')) : null,
+                defaultValue: formData.get('defaultValue') || null,
+                isRequired: formData.get('isRequired') ? 1 : 0
+            };
+
+            try {
+                const response = await fetch('/api/custom-fields/definitions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    addDefinitionError.innerText = result.error?.message || 'Failed to create field definition.';
+                    addDefinitionError.classList.remove('hidden');
+                }
+            } catch (err) {
+                addDefinitionError.innerText = 'A network error occurred.';
+                addDefinitionError.classList.remove('hidden');
+            } finally {
+                addDefinitionBtn.disabled = false;
+                addDefinitionBtn.innerText = 'Add Field Definition';
+            }
+        });
+    }
+
+    // Custom Fields
+    const customFieldsForm = document.getElementById('custom-fields-form');
+    const customFieldsSaveBtn = document.getElementById('custom-fields-save-btn');
+    const customFieldsError = document.getElementById('custom-fields-error');
+
+    if (customFieldsForm) {
+        customFieldsForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            customFieldsError.classList.add('hidden');
+            customFieldsSaveBtn.disabled = true;
+            customFieldsSaveBtn.innerText = 'Saving...';
+
+            const formData = new FormData(customFieldsForm);
+            const fields = [];
+
+            for (const [key, value] of formData.entries()) {
+                if (key.startsWith('field_')) {
+                    const input = customFieldsForm.querySelector(`[name="${key}"]`);
+                    const fieldName = input.getAttribute('data-field-name');
+                    const fieldType = input.getAttribute('data-field-type');
+
+                    fields.push({
+                        fieldName,
+                        fieldValue: value || null,
+                        fieldType
+                    });
+                }
+            }
+
+            try {
+                const response = await fetch('/api/custom-fields/contacts/<%= contact.id %>/fields', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fields })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    customFieldsError.innerText = result.error?.message || 'Failed to save custom fields.';
+                    customFieldsError.classList.remove('hidden');
+                }
+            } catch (err) {
+                customFieldsError.innerText = 'A network error occurred.';
+                customFieldsError.classList.remove('hidden');
+            } finally {
+                customFieldsSaveBtn.disabled = false;
+                customFieldsSaveBtn.innerText = 'Save Fields';
+            }
+        });
+    }
+
+    // List Management
+    async function addToList(listId) {
+        try {
+            const response = await fetch('/api/lists/assign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contactId: <%= contact.id %>,
+                    listId: listId
+                })
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const result = await response.json();
+                const errorDiv = document.getElementById('add-list-error');
+                if (errorDiv) {
+                    errorDiv.innerText = result.error?.message || 'Failed to add contact to list.';
+                    errorDiv.classList.remove('hidden');
+                }
+            }
+        } catch (err) {
+            alert('A network error occurred.');
+        }
+    }
+
+    async function removeFromList(listId) {
+        if (!confirm('Remove this contact from the list?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/lists/assign', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contactId: <%= contact.id %>,
+                    listId: listId
+                })
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const result = await response.json();
+                alert(result.error?.message || 'Failed to remove contact from list.');
+            }
+        } catch (err) {
+            alert('A network error occurred.');
+        }
+    }
+</script>

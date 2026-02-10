@@ -23,7 +23,6 @@ export class AuthService {
     }
 
     const user = new User();
-    user.id = uuidv4();
     user.email = email;
     user.password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     user.name = name || null;
@@ -45,14 +44,14 @@ export class AuthService {
     return user;
   }
 
-  async findById(id: string): Promise<User | null> {
+  async findById(id: number): Promise<User | null> {
     return this.userRepo.findOne({ where: { id } });
   }
 
   // --- API Key Management ---
 
   async generateApiKey(
-    userId: string,
+    userId: number,
     description: string,
     scopes: string[],
     expiresInDays?: number
@@ -64,7 +63,6 @@ export class AuthService {
 
     const rawKey = uuidv4();
     const apiKey = new ApiKey();
-    apiKey.id = uuidv4();
     apiKey.user_id = userId;
     apiKey.key = rawKey;
     apiKey.description = description || null;
@@ -107,7 +105,7 @@ export class AuthService {
     };
   }
 
-  async revokeApiKey(keyId: string, userId: string): Promise<void> {
+  async revokeApiKey(keyId: number, userId: number): Promise<void> {
     const apiKey = await this.apiKeyRepo.findOne({
       where: { id: keyId, user_id: userId },
     });
@@ -120,7 +118,7 @@ export class AuthService {
     await this.apiKeyRepo.save(apiKey);
   }
 
-  async listApiKeys(userId: string): Promise<ApiKey[]> {
+  async listApiKeys(userId: number): Promise<ApiKey[]> {
     return this.apiKeyRepo.find({
       where: { user_id: userId },
       order: { created_at: 'DESC' },

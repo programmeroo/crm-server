@@ -10,12 +10,21 @@ import { AuthService } from './services/AuthService';
 import { AuditService } from './services/AuditService';
 import { WorkspaceService } from './services/WorkspaceService';
 import { ContactService } from './services/ContactService';
+import { ListService } from './services/ListService';
+import { CustomFieldService } from './services/CustomFieldService';
 import { AuthController } from './controllers/AuthController';
 import { AuditController } from './controllers/AuditController';
 import { WorkspaceController } from './controllers/WorkspaceController';
 import { ContactController } from './controllers/ContactController';
+import { ListController } from './controllers/ListController';
+import { CustomFieldController } from './controllers/CustomFieldController';
+import { DashboardController } from './controllers/DashboardController';
+import { ContactUIController } from './controllers/ContactUIController';
+import { WorkspaceUIController } from './controllers/WorkspaceUIController';
 import { createApiKeyAuth } from './middlewares/apiKeyAuth';
 import { createAuditMiddleware } from './middlewares/auditMiddleware';
+import expressLayouts from 'express-ejs-layouts';
+import { Workspace } from './entities/Workspace.entity';
 
 export function createApp(dataSource: DataSource): express.Application {
   const app = express();
@@ -63,6 +72,8 @@ export function createApp(dataSource: DataSource): express.Application {
   // View engine
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, '..', 'views'));
+  app.use(expressLayouts);
+  app.set('layout', 'layout'); // refers to views/layout.ejs
 
   // Static files
   app.use(express.static(path.join(__dirname, '..', 'public')));
@@ -72,9 +83,36 @@ export function createApp(dataSource: DataSource): express.Application {
   const auditService = new AuditService(dataSource);
   const workspaceService = new WorkspaceService(dataSource);
   const contactService = new ContactService(dataSource);
+  const listService = new ListService(dataSource);
+  const customFieldService = new CustomFieldService(dataSource);
 
   // Audit middleware (cross-cutting, before routes)
   app.use(createAuditMiddleware(auditService));
+
+  // --- UI Locals Middleware ---
+  app.use(async (req, res, next) => {
+    if ((req.session as any)?.userId) {
+      const userId = (req.session as any).userId;
+      try {
+        const workspaces = await workspaceService.listByUser(userId);
+        res.locals.workspaces = workspaces;
+        res.locals.user = {
+          name: (req.session as any).name || 'User',
+          email: (req.session as any).email
+        };
+        // Default values for pages that might forget them
+        res.locals.activePage = '';
+        res.locals.currentWorkspaceId = null;
+        res.locals.pageTitle = 'Pi-CRM';
+      } catch (err) {
+        res.locals.workspaces = [];
+      }
+    } else {
+      res.locals.workspaces = [];
+      res.locals.user = null;
+    }
+    next();
+  });
 
   // --- Routes ---
 
@@ -91,7 +129,7 @@ export function createApp(dataSource: DataSource): express.Application {
   app.use('/api', createApiKeyAuth(authService));
 
   // Protected test route (requires API key)
-  app.get('/api/protected', (req, res, next) => {
+  app.get('/api/protected', (req: any, res, next) => {
     if (!req.apiUser) {
       next(new (require('./errors/AppError').AppError)('UNAUTHORIZED', 'API key required', 401));
       return;
@@ -106,9 +144,44 @@ export function createApp(dataSource: DataSource): express.Application {
   const workspaceController = new WorkspaceController(workspaceService);
   app.use('/api/workspaces', workspaceController.router);
 
-  // Contacts
+  // Dashboard (UI)
+  const dashboardController = new DashboardController(workspaceService, contactService);
+  app.use('/dashboard', dashboardController.router);
+
+  // Redirect root to dashboard
+  app.get('/', (req, res) => {
+    res.redirect('/dashboard');
+  });
+
+  // Basic login route
+  app.get('/login', (req, res) => {
+    res.render('login', { title: 'Login', layout: false });
+  });
+
+  // UI Logout
+  app.get('/logout', (req, res) => {
+    req.session.destroy(() => {
+      res.redirect('/login');
+    });
+  });
+
+  const workspaceUIController = new WorkspaceUIController(workspaceService, contactService, listService);
+  app.use('/workspaces', workspaceUIController.router);
+
+  const contactUIController = new ContactUIController(contactService, workspaceService, customFieldService, listService);
+  app.use('/contacts', contactUIController.router);
+
+  // API - Contacts
   const contactController = new ContactController(contactService, workspaceService);
   app.use('/api/contacts', contactController.router);
+
+  // Lists
+  const listController = new ListController(listService, workspaceService, contactService);
+  app.use('/api/lists', listController.router);
+
+  // Custom Fields
+  const customFieldController = new CustomFieldController(customFieldService, contactService);
+  app.use('/api/custom-fields', customFieldController.router);
 
   // Audit logs
   const auditController = new AuditController(auditService);

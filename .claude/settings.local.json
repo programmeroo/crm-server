@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wsl -d Ubuntu -e bash -c \"cd /home/andy/crm-server && git log --oneline -5\")",
+      "Bash(wsl -d Ubuntu -e bash -c \"cd /home/andy/crm-server && git diff --staged\")",
+      "Bash(wsl -d Ubuntu -e bash -c \"cd /home/andy/crm-server && git add CLAUDE.md .gitignore docs/final_prompt_plan.md docs/updated_prompts_for_claude.md ''docs/not used/''\")",
+      "Bash(wsl -d Ubuntu -e bash -c \"cd /home/andy/crm-server && git add -u\")",
+      "Bash(wsl -d Ubuntu -e bash -c \"cd /home/andy/crm-server && git commit -m \"\"$\\(cat <<''EOF''\nFresh start: remove old JS codebase, add final spec and CLAUDE.md\n\nRemoved all old JavaScript source code, configs, views, tests, and\nseed scripts. Moved superseded docs to ''not used'' folder. Added\nCLAUDE.md with authoritative schema, conventions, and 18-prompt\nimplementation plan. Project is now a clean slate ready for\nTypeScript rebuild.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\"\"\")",
+      "Read(//wsl$/Ubuntu/home/andy/crm-server/src/**)",
+      "Read(//wsl$/Ubuntu/home/andy/crm-server/docs//**)"
+    ]
+  }
+}

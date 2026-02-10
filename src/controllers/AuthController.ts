@@ -5,7 +5,7 @@ import { AppError } from '../errors/AppError';
 import { requireLogin } from '../middlewares/requireLogin';
 
 const loginSchema = Joi.object({
-  email: Joi.string().email().required(),
+  email: Joi.string().email({ tlds: { allow: false } }).required(),
   password: Joi.string().min(1).required(),
 });
 
@@ -41,7 +41,9 @@ export class AuthController {
 
       const user = await this.authService.login(value.email, value.password);
 
-      req.session.userId = user.id;
+      (req.session as any).userId = user.id;
+      (req.session as any).email = user.email;
+      (req.session as any).name = user.name;
 
       res.json({
         data: { id: user.id, email: user.email, name: user.name },
@@ -68,7 +70,7 @@ export class AuthController {
 
   private async me(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const user = await this.authService.findById(req.session.userId!);
+      const user = await this.authService.findById((req.session as any).userId!);
       if (!user) {
         throw new AppError('NOT_FOUND', 'User not found', 404);
       }
@@ -89,7 +91,7 @@ export class AuthController {
       }
 
       const { apiKey, rawKey } = await this.authService.generateApiKey(
-        req.session.userId!,
+        (req.session as any).userId!,
         value.description,
         value.scopes,
         value.expiresInDays
@@ -112,7 +114,7 @@ export class AuthController {
 
   private async listKeys(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const keys = await this.authService.listApiKeys(req.session.userId!);
+      const keys = await this.authService.listApiKeys((req.session as any).userId!);
       res.json({
         data: keys.map((k) => ({
           id: k.id,
@@ -131,7 +133,7 @@ export class AuthController {
 
   private async revokeKey(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await this.authService.revokeApiKey(req.params.id as string, req.session.userId!);
+      await this.authService.revokeApiKey(Number(req.params.id), (req.session as any).userId!);
       res.json({ data: { message: 'API key revoked' }, error: null });
     } catch (err) {
       next(err);

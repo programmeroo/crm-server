@@ -6,7 +6,7 @@ import { AppError } from '../errors/AppError';
 import { requireLogin } from '../middlewares/requireLogin';
 
 const createSchema = Joi.object({
-  workspaceId: Joi.string().uuid().required(),
+  workspaceId: Joi.number().integer().optional(),
   firstName: Joi.string().trim().allow('').optional(),
   lastName: Joi.string().trim().allow('').optional(),
   primaryEmail: Joi.string().email().allow('', null).optional(),
@@ -15,6 +15,7 @@ const createSchema = Joi.object({
 });
 
 const updateSchema = Joi.object({
+  workspaceId: Joi.number().integer().allow(null).optional(),
   firstName: Joi.string().trim().allow('', null).optional(),
   lastName: Joi.string().trim().allow('', null).optional(),
   primaryEmail: Joi.string().email().allow('', null).optional(),
@@ -32,21 +33,13 @@ export class ContactController {
     this.router = Router();
     this.router.use(requireLogin);
     this.router.post('/', this.create.bind(this));
+    this.router.get('/', this.listByUser.bind(this));
     this.router.get('/workspace/:workspaceId', this.listByWorkspace.bind(this));
     this.router.get('/:id', this.getById.bind(this));
     this.router.put('/:id', this.update.bind(this));
     this.router.delete('/:id', this.delete.bind(this));
   }
 
-  private async verifyWorkspaceAccess(workspaceId: string, userId: string): Promise<void> {
-    const workspace = await this.workspaceService.findById(workspaceId);
-    if (!workspace) {
-      throw new AppError('NOT_FOUND', 'Workspace not found', 404);
-    }
-    if (workspace.user_id !== userId) {
-      throw new AppError('FORBIDDEN', 'Not your workspace', 403);
-    }
-  }
 
   private async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -55,9 +48,16 @@ export class ContactController {
         throw new AppError('VALIDATION_ERROR', error.details[0].message, 400);
       }
 
-      await this.verifyWorkspaceAccess(value.workspaceId, req.session.userId!);
+      const userId = (req.session as any).userId!;
+      if (value.workspaceId) {
+        const workspace = await this.workspaceService.findById(value.workspaceId);
+        if (!workspace || workspace.user_id !== userId) {
+          throw new AppError('FORBIDDEN', 'Workspace not found or no access', 403);
+        }
+      }
 
-      const contact = await this.contactService.create(value.workspaceId, {
+      const contact = await this.contactService.create(userId, {
+        workspaceId: value.workspaceId,
         firstName: value.firstName,
         lastName: value.lastName,
         primaryEmail: value.primaryEmail,
@@ -70,12 +70,21 @@ export class ContactController {
     }
   }
 
+  private async listByUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const contacts = await this.contactService.findByUser((req.session as any).userId!);
+      res.json({ data: contacts, error: null });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   private async listByWorkspace(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const workspaceId = req.params.workspaceId as string;
-      await this.verifyWorkspaceAccess(workspaceId, req.session.userId!);
+      const workspaceId = Number(req.params.workspaceId);
+      const userId = (req.session as any).userId!;
 
-      const contacts = await this.contactService.findByWorkspace(workspaceId);
+      const contacts = await this.contactService.findByWorkspace(workspaceId, userId);
       res.json({ data: contacts, error: null });
     } catch (err) {
       next(err);
@@ -84,12 +93,10 @@ export class ContactController {
 
   private async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const contact = await this.contactService.findById(req.params.id as string);
+      const contact = await this.contactService.findById(Number(req.params.id), (req.session as any).userId!);
       if (!contact) {
         throw new AppError('NOT_FOUND', 'Contact not found', 404);
       }
-
-      await this.verifyWorkspaceAccess(contact.workspace_id, req.session.userId!);
       res.json({ data: contact, error: null });
     } catch (err) {
       next(err);
@@ -103,16 +110,9 @@ export class ContactController {
         throw new AppError('VALIDATION_ERROR', error.details[0].message, 400);
       }
 
-      const contact = await this.contactService.findById(req.params.id as string);
-      if (!contact) {
-        throw new AppError('NOT_FOUND', 'Contact not found', 404);
-      }
-
-      await this.verifyWorkspaceAccess(contact.workspace_id, req.session.userId!);
-
       const updated = await this.contactService.update(
-        req.params.id as string,
-        contact.workspace_id,
+        Number(req.params.id),
+        (req.session as any).userId!,
         value,
       );
       res.json({ data: updated, error: null });
@@ -123,14 +123,7 @@ export class ContactController {
 
   private async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const contact = await this.contactService.findById(req.params.id as string);
-      if (!contact) {
-        throw new AppError('NOT_FOUND', 'Contact not found', 404);
-      }
-
-      await this.verifyWorkspaceAccess(contact.workspace_id, req.session.userId!);
-
-      await this.contactService.delete(req.params.id as string, contact.workspace_id);
+      await this.contactService.delete(Number(req.params.id), (req.session as any).userId!);
       res.json({ data: { message: 'Contact deleted' }, error: null });
     } catch (err) {
       next(err);

@@ -8,7 +8,7 @@ const querySchema = Joi.object({
   offset: Joi.number().integer().min(0).default(0),
   action: Joi.string().optional(),
   entityType: Joi.string().optional(),
-  userId: Joi.string().uuid().optional(),
+  userId: Joi.number().integer().optional(),
 });
 
 export class AuditController {
@@ -21,7 +21,7 @@ export class AuditController {
 
   private async getLogs(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.session?.userId) {
+      if (!(req.session as any)?.userId) {
         throw new AppError('UNAUTHORIZED', 'Authentication required', 401);
       }
 
@@ -35,7 +35,7 @@ export class AuditController {
         offset: value.offset,
         action: value.action,
         entityType: value.entityType,
-        userId: value.userId,
+        userId: value.userId || (req.session as any).userId,
       });
 
       res.json({ data: logs, error: null });

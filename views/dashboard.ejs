@@ -1,0 +1,208 @@
+<div class="space-y-6">
+    <!-- Main Grid (3 columns on large screens) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- Pending Approvals (Loan Factory) -->
+        <div class="bg-white shadow-md rounded-lg p-6 border-l-4 border-red-500">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-slate-900">Pending Approvals</h3>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800">
+                    <%= pendingApprovals.length %> pending
+                </span>
+            </div>
+            <div class="space-y-3">
+                <% if (pendingApprovals.length === 0) { %>
+                    <p class="text-sm text-slate-400 italic">No pending approvals</p>
+                <% } %>
+                <% pendingApprovals.forEach(item => { %>
+                    <div class="border-b border-slate-100 pb-3 last:border-0">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm font-semibold text-slate-900"><%= item.name %></p>
+                                <p class="text-xs text-slate-500 mt-1">submitted <%= item.timeAgo %></p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 mt-2">
+                            <button class="px-3 py-1 bg-green-50 text-green-700 rounded-md text-xs font-semibold hover:bg-green-100 transition-colors">
+                                Approve
+                            </button>
+                            <button class="px-3 py-1 bg-red-50 text-red-700 rounded-md text-xs font-semibold hover:bg-red-100 transition-colors">
+                                Reject
+                            </button>
+                        </div>
+                    </div>
+                <% }) %>
+            </div>
+        </div>
+
+        <!-- Activity Needing Attention -->
+        <div class="bg-white shadow-md rounded-lg p-6 border-l-4 border-yellow-500">
+            <h3 class="text-lg font-semibold text-slate-900 mb-4">Activity Needing Attention</h3>
+            <div class="space-y-3">
+                <% attentionItems.forEach(item => { %>
+                    <div class="flex items-start gap-3">
+                        <div class="text-yellow-500 mt-0.5">
+                            <%- item.icon %>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-slate-900"><%= item.title %></p>
+                            <p class="text-xs text-slate-500 mt-1"><%= item.description %></p>
+                        </div>
+                        <button class="text-xs text-blue-600 hover:text-blue-800 font-semibold whitespace-nowrap">
+                            View
+                        </button>
+                    </div>
+                <% }) %>
+            </div>
+        </div>
+
+        <!-- Quick placeholder for grid alignment -->
+        <div></div>
+    </div>
+
+    <!-- Todos / Action Items -->
+    <div>
+        <h3 class="text-lg font-semibold text-slate-900 mb-4">Todos / Action Items</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <% todos.forEach(todo => { %>
+                <div class="bg-white shadow-md rounded-lg p-4 hover:shadow-lg transition-shadow">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold text-slate-900"><%= todo.title %></p>
+                            <p class="text-xs text-slate-500 mt-1"><%= todo.description %></p>
+                        </div>
+                        <input type="checkbox" class="rounded text-blue-600 focus:ring-blue-500 border-slate-300 mt-1">
+                    </div>
+                    <button class="w-full px-3 py-1.5 bg-slate-100 text-slate-700 rounded-md text-xs font-semibold hover:bg-slate-200 transition-colors">
+                        Mark Done
+                    </button>
+                </div>
+            <% }) %>
+        </div>
+    </div>
+
+    <!-- Recent / Hot Leads -->
+    <div>
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-slate-900">Recent / Hot Leads</h3>
+            <a href="/contacts" class="text-sm font-semibold text-blue-600 hover:text-blue-800">View all</a>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <% hotLeads.forEach(lead => { %>
+                <div class="bg-white shadow-md rounded-lg p-4 hover:shadow-lg transition-shadow">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm flex-shrink-0">
+                            <%= lead.initials %>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-slate-900 truncate"><%= lead.name %></p>
+                            <p class="text-xs text-slate-500"><%= lead.list %></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700">
+                            <%= lead.tag %>
+                        </span>
+                        <p class="text-[10px] text-slate-400"><%= lead.lastContact %></p>
+                    </div>
+                    <a href="/contacts/<%= lead.id %>" class="block mt-3 text-xs text-blue-600 hover:text-blue-800 font-semibold text-center">
+                        View
+                    </a>
+                </div>
+            <% }) %>
+        </div>
+    </div>
+
+    <!-- Active & Upcoming Campaigns -->
+    <div>
+        <h3 class="text-lg font-semibold text-slate-900 mb-4">Active & Upcoming Campaigns</h3>
+        <div class="space-y-4">
+            <% campaigns.forEach(campaign => { %>
+                <div class="bg-white shadow-md rounded-lg p-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <h4 class="text-base font-semibold text-slate-900"><%= campaign.name %></h4>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700 uppercase tracking-wider">
+                                <%= campaign.type %>
+                            </span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold
+                                <%= campaign.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600' %>">
+                                <%= campaign.status %>
+                            </span>
+                        </div>
+                        <% if (campaign.status === 'Active') { %>
+                            <span class="text-sm font-semibold text-slate-600"><%= campaign.progress %>% sent</span>
+                        <% } %>
+                    </div>
+                    <p class="text-sm text-slate-600 mb-4"><%= campaign.nextStep %></p>
+                    <% if (campaign.status === 'Active' && campaign.progress > 0) { %>
+                        <div class="w-full bg-slate-200 rounded-full h-2 mb-4">
+                            <div class="bg-blue-600 h-2 rounded-full" style="width: <%= campaign.progress %>%"></div>
+                        </div>
+                    <% } %>
+                    <div class="flex gap-2">
+                        <% if (campaign.status === 'Active') { %>
+                            <button class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-md text-xs font-semibold hover:bg-slate-200 transition-colors">
+                                Pause
+                            </button>
+                        <% } %>
+                        <button class="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-xs font-semibold hover:bg-blue-100 transition-colors">
+                            Edit
+                        </button>
+                        <button class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-md text-xs font-semibold hover:bg-slate-200 transition-colors">
+                            View Stats
+                        </button>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+    </div>
+
+    <!-- AI Insights (compact teaser) -->
+    <div class="bg-white shadow-md rounded-lg p-6 border-l-4 border-blue-500">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-blue-100 rounded-lg text-blue-600">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-slate-900">AI Insights</h3>
+            </div>
+            <a href="/ai-insights" class="text-sm font-semibold text-blue-600 hover:text-blue-800">View All</a>
+        </div>
+        <div class="space-y-3">
+            <% insights.slice(0, 2).forEach(item => { %>
+                <div class="p-4 bg-blue-50 rounded-lg border border-blue-100 hover:border-blue-300 transition-colors">
+                    <div class="flex items-start justify-between mb-2">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-200 text-blue-800 uppercase tracking-wider">
+                            <%= item.type %>
+                        </span>
+                        <span class="text-xs text-slate-500">Confidence: <%= item.confidence %>%</span>
+                    </div>
+                    <p class="text-sm text-slate-700 leading-relaxed line-clamp-2">
+                        <%= item.content %>
+                    </p>
+                </div>
+            <% }) %>
+        </div>
+    </div>
+
+    <!-- Quick Stats (at bottom per wireframe) -->
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+        <div class="flex flex-wrap items-center gap-8">
+            <% stats.forEach(stat => { %>
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
+                        <%- stat.icon %>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider"><%= stat.label %></p>
+                        <p class="text-2xl font-bold text-slate-900"><%= stat.value %></p>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+    </div>
+</div>

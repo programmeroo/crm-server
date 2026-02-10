@@ -1,16 +1,12 @@
-import 'express-session';
-
-declare module 'express-session' {
-  interface SessionData {
-    userId?: string;
-  }
-}
+import { User } from '../entities/User.entity';
 
 declare global {
   namespace Express {
     interface Request {
-      apiUser?: import('../entities/User.entity').User;
+      apiUser?: User;
       apiScopes?: string[];
     }
   }
 }
+
+export { }; // Ensure it's treated as a module

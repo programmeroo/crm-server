@@ -15,7 +15,7 @@ export function createAuditMiddleware(auditService: AuditService) {
     // Capture these before routing modifies req.path and before session is destroyed
     const requestPath = req.originalUrl.split('?')[0];
     const requestMethod = req.method;
-    const sessionUserId = req.session?.userId || null;
+    const sessionUserId = (req.session as any)?.userId || null;
     const ip = getClientIp(req);
 
     res.json = function (body: Record<string, unknown>) {
@@ -26,15 +26,15 @@ export function createAuditMiddleware(auditService: AuditService) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           const userData = body?.data as Record<string, unknown> | undefined;
           logPromises.push(auditService.logAction({
-            userId: (userData?.id as string) || null,
+            userId: userData?.id ? Number(userData.id) : null,
             action: 'user.login',
             entityType: 'user',
-            entityId: (userData?.id as string) || undefined,
+            entityId: userData?.id ? Number(userData.id) : undefined,
             details: JSON.stringify({ email: userData?.email }),
             ipAddress: ip,
           }));
         } else {
-          const reqBody = req.body as Record<string, unknown> | undefined;
+          const reqBody = (req as any).body as Record<string, unknown> | undefined;
           logPromises.push(auditService.logAction({
             userId: null,
             action: 'user.login_failed',
@@ -60,10 +60,10 @@ export function createAuditMiddleware(auditService: AuditService) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           const userData = body?.data as Record<string, unknown> | undefined;
           logPromises.push(auditService.logAction({
-            userId: (userData?.id as string) || null,
+            userId: userData?.id ? Number(userData.id) : null,
             action: 'user.register',
             entityType: 'user',
-            entityId: (userData?.id as string) || undefined,
+            entityId: userData?.id ? Number(userData.id) : undefined,
             ipAddress: ip,
           }));
         }

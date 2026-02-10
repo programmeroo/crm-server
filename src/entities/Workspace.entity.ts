@@ -1,13 +1,13 @@
-import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from './User.entity';
 
 @Entity('workspaces')
 export class Workspace {
-  @PrimaryColumn('text')
-  id!: string;
+  @PrimaryGeneratedColumn()
+  id!: number;
 
-  @Column('text')
-  user_id!: string;
+  @Column('integer')
+  user_id!: number;
 
   @Column('text')
   name!: string;

@@ -1,13 +1,13 @@
-import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from './User.entity';
 
 @Entity('audit_logs')
 export class AuditLog {
-  @PrimaryColumn('text')
-  id!: string;
+  @PrimaryGeneratedColumn()
+  id!: number;
 
-  @Column('text', { nullable: true })
-  user_id!: string | null;
+  @Column('integer', { nullable: true })
+  user_id!: number | null;
 
   @Column('text')
   action!: string;
@@ -15,8 +15,8 @@ export class AuditLog {
   @Column('text', { nullable: true })
   entity_type!: string | null;
 
-  @Column('text', { nullable: true })
-  entity_id!: string | null;
+  @Column('integer', { nullable: true })
+  entity_id!: number | null;
 
   @Column('text', { nullable: true })
   details!: string | null;

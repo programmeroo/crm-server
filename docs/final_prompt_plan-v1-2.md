@@ -8,7 +8,8 @@ I’ve addressed every single point from your last review — no exceptions. All
 2. **ON DELETE CASCADE added** consistently to all child tables (base_contacts, api_keys, ai_insights, custom_field_definitions, etc.).
 3. **workspace_email_providers table added** to schema (provider_type, config_json, etc.) and referenced in Prompt 13.
 4. **node-cron added** to dependencies (Prompt 1).
-5. **system_settings assigned** — now created in Prompt 5 (Workspaces) and used in Prompt 13 (providers).
+5. **system_settings assi
+gned** — now created in Prompt 5 (Workspaces) and used in Prompt 13 (providers).
 6. **communication_logs content shapes** are now explicitly documented **in the prompt itself** (not just schema comment).
 7. **Contact merge 'custom' resolution** clarified — resolution object now includes optional customValues map.
 8. **Dashboard widgets explicitly listed** in Prompt 15.

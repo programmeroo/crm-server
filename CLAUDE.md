@@ -3,7 +3,7 @@
 **Purpose**: Home-use CRM for Andy & Monalisa to manage segmented contacts, communications, templates, campaigns, and AI-assisted workflows.
 **Stack**: TypeScript, Node.js (OOP), Express, TypeORM (SQLite), SSR (EJS + Tailwind CDN), Jest + Supertest
 **Target**: Raspberry Pi (Ubuntu) - lightweight, low-resource design
-**Authoritative docs**: `docs/final_prompt_plan.md` (schema + plan), `docs/updated_prompts_for_claude.md` (prompt text)
+**Authoritative docs**: `docs/project-specification-v1-5.md` (schema + architecture), `docs/prompt-plan-v1-5.md` (implementation plan), `docs/project-spec-wireframes-v1-4.md` (UI design)
 
 ## Conventions (follow exactly in every file)
 
@@ -24,7 +24,7 @@
 ```sql
 -- Users
 CREATE TABLE users (
-  id            TEXT PRIMARY KEY,
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
   email         TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   name          TEXT,
@@ -33,8 +33,8 @@ CREATE TABLE users (
 
 -- API Keys
 CREATE TABLE api_keys (
-  id            TEXT PRIMARY KEY,
-  user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   key           TEXT UNIQUE NOT NULL,
   description   TEXT,
   scopes        TEXT NOT NULL,                  -- JSON array
@@ -45,25 +45,26 @@ CREATE TABLE api_keys (
 
 -- Workspaces
 CREATE TABLE workspaces (
-  id            TEXT PRIMARY KEY,
-  user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name          TEXT NOT NULL,
   created_at    TEXT DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, name)
 );
 
--- Base Contacts (only 6 fixed fields)
+-- Base Contacts (v1.5: belongs to User, optionally Workspace)
 CREATE TABLE base_contacts (
-  id              TEXT PRIMARY KEY,
-  workspace_id    TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  workspace_id    INTEGER REFERENCES workspaces(id) ON DELETE SET NULL,
   created_on      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   first_name      TEXT,
   last_name       TEXT,
   primary_email   TEXT,
   primary_phone   TEXT,
   company         TEXT,
-  UNIQUE(workspace_id, primary_email),
-  UNIQUE(workspace_id, primary_phone)
+  UNIQUE(user_id, primary_email),
+  UNIQUE(user_id, primary_phone)
 );
 
 -- Custom Fields (EAV)
@@ -237,19 +238,44 @@ CREATE INDEX idx_workspace_email_providers_workspace_id ON workspace_email_provi
 | 3 | API Keys & Security Middleware | complete |
 | 4 | Audit Logging (cross-cutting) | complete |
 | 5 | Workspaces | complete |
-| 6 | Base Contacts | complete |
-| 7 | Contact Lists | not started |
-| 8 | Custom Fields (EAV) | not started |
-| 9 | Contact Merge | not started |
-| 10 | Communication Log | not started |
-| 11 | Templates & AI Generation | not started |
-| 12 | Campaigns & Approvals | not started |
-| 13 | Email & Twilio Providers + Sending | not started |
-| 14 | AI Monitoring & Insights | not started |
-| 15 | Dashboard Layout & Auth Views | not started |
-| 16 | Contact List & Detail Views | not started |
-| 17 | Templates, Campaigns & Settings Views | not started |
-| 18 | CSV Import/Export, Backups, Final Wiring & Deployment | not started |
+| 6 | Base Contacts (v1.5) | complete |
+| 7 | Contact Lists | complete |
+| 8 | Custom Fields (EAV) | complete |
+| 9 | Templates | not started |
+| 10 | Campaigns | not started |
+| ... | ... | ... |
+| 15 | Dashboard Layout & Auth Views | complete (matches wireframe) |
+| 16 | Contact List & Detail Views | complete (matches wireframe) |
+| 17 | Workspace List & Detail Views | complete (with list management) |
+
+## UI State (Fully Implemented per Wireframe)
+
+### Dashboard (`/`)
+- **7 Sections**: Pending Approvals (red border), Activity Needing Attention (yellow border), Todos, Recent/Hot Leads (cards), Active Campaigns (with progress bars), AI Insights (compact), Quick Stats
+- **Layout**: 3-column grid (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3`)
+- **AI Insights**: Intentionally minimal - white bg, blue left border, shows 2 insights, "View All" link to `/ai-insights`
+
+### Contacts List (`/contacts`)
+- **Search**: Real-time filtering by name, email, phone, company
+- **Filters**: Workspace dropdown, Primary List dropdown, Clear Filters button
+- **Table Columns**: Name, Email, Phone, Company, Primary List, Last Contact, Actions
+- **Action Icons**: Eye (view), Pencil (edit), Envelope (email)
+- **Bulk Actions**: Toolbar appears when contacts selected - Send Email, Export Selected, Delete
+- **Features**: Select All checkbox, Export CSV button, "New Contact" modal
+
+### Contact Detail (`/contacts/:id`)
+- **Base Info**: Edit modal with workspace assignment
+- **Custom Fields**: "Manage Definitions" and "Edit Values" modals
+- **Lists**: View assigned lists, "Add to List" modal (if workspace assigned), remove from list
+- **Actions**: Edit contact, Delete contact, Email contact
+
+### Workspace Detail (`/workspaces/:id`)
+- **Lists Management**: "New List" button opens modal, create primary/secondary lists, delete lists (hover)
+- **Contacts Table**: Shows contacts assigned to workspace
+- **Stats**: Performance metrics card
+
+### Workspaces List (`/workspaces`)
+- Grid of workspace cards with contact counts
 
 ## Important Notes
 
@@ -258,6 +284,7 @@ CREATE INDEX idx_workspace_email_providers_workspace_id ON workspace_email_provi
 - NULL email/phone is allowed in base_contacts. Duplicate check only applies when values are present.
 - Contact merge deletes source contact, reassigns lists, copies logs, unions custom fields. Resolution includes optional customValues map for 'custom' choices.
 - Dashboard widgets: pending approvals, recent contacts, recent communications, AI insights, campaign status.
+- **UI/UX Design Decisions**: Documented in `docs/project-specification-v1-5.md` section 3
 
 ## Deviations Log
 
@@ -268,3 +295,12 @@ Record any changes from the plan here as they happen during implementation.
 - connect-sqlite3 has no @types — custom declaration at src/types/connect-sqlite3.d.ts
 - Audit middleware uses req.originalUrl (not req.path) because Express sub-routers modify req.path
 - Audit middleware captures session userId before routing since logout destroys session before res.json
+- **UI Architecture**: Dashboard, Contacts, and Workspaces now use a global middleware in `app.ts` that provides `workspaces` (list) and `user` (name/email) to `res.locals`. This avoids duplicate fetches in every UI controller.
+- **V1.5 Transition**: Successfully moved to `INTEGER PRIMARY KEY AUTOINCREMENT` for all tables.
+- **Seeding & WSL**: WSL environment requires specific absolute paths for `sqlite3` and `ts-node` when triggered via Windows tasks. Use `scripts/seed_db.sh` for reliable seeding.
+- **Custom Fields**: TypeORM null handling requires `IsNull()` import for workspace_id queries
+- **List Management**: Added DELETE /api/lists/:id endpoint with workspace access verification
+- **Contact Lists**: Full UI integration - workspace detail (create/delete), contact detail (add/remove), contacts list (filter by primary list)
+- **Dashboard Design**: AI Insights intentionally compact (white bg, 2 insights max, "View All" link) - documented in project-specification-v1-5.md
+- **Contacts List**: Fully redesigned to match wireframe - proper columns, filters, bulk actions, action icons
+- **Testing Strategy**: Per user request, focus on app functionality first, defer test fixes (UUID→Integer conversion)

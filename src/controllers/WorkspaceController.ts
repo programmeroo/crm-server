@@ -26,7 +26,7 @@ export class WorkspaceController {
 
   private async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const workspaces = await this.workspaceService.listByUser(req.session.userId!);
+      const workspaces = await this.workspaceService.listByUser((req.session as any).userId!);
       res.json({ data: workspaces, error: null });
     } catch (err) {
       next(err);
@@ -40,7 +40,7 @@ export class WorkspaceController {
         throw new AppError('VALIDATION_ERROR', error.details[0].message, 400);
       }
 
-      const workspace = await this.workspaceService.create(req.session.userId!, value.name);
+      const workspace = await this.workspaceService.create((req.session as any).userId!, value.name);
       res.status(201).json({ data: workspace, error: null });
     } catch (err) {
       next(err);
@@ -55,8 +55,8 @@ export class WorkspaceController {
       }
 
       const workspace = await this.workspaceService.update(
-        req.params.id as string,
-        req.session.userId!,
+        Number(req.params.id),
+        (req.session as any).userId!,
         value.name
       );
       res.json({ data: workspace, error: null });
@@ -67,7 +67,7 @@ export class WorkspaceController {
 
   private async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await this.workspaceService.delete(req.params.id as string, req.session.userId!);
+      await this.workspaceService.delete(Number(req.params.id), (req.session as any).userId!);
       res.json({ data: { message: 'Workspace deleted' }, error: null });
     } catch (err) {
       next(err);

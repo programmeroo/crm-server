@@ -1,0 +1,167 @@
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">Workspaces</h1>
+            <p class="text-sm text-slate-500 mt-1">Manage your distinct brands and automation hubs.</p>
+        </div>
+        <button onclick="toggleModal('add-workspace-modal')"
+            class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-md active:scale-95">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Create Workspace
+        </button>
+    </div>
+
+    <!-- Workspace Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <% workspaces.forEach(ws=> { %>
+            <a href="/workspaces/<%= ws.id %>"
+                class="group bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:border-blue-200 hover:shadow-md transition-all">
+                <div class="flex items-start justify-between mb-4">
+                    <div
+                        class="h-12 w-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                            </path>
+                        </svg>
+                    </div>
+                    <span
+                        class="text-xs font-bold text-slate-300 uppercase tracking-widest group-hover:text-blue-200 transition-colors italic">Active</span>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900 mb-1">
+                    <%= ws.name %>
+                </h3>
+                <p class="text-sm text-slate-500 mb-4">Complete campaigns and relationship tracking for <%= ws.name %>.
+                </p>
+                <div
+                    class="pt-4 border-t border-slate-50 flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    <span>View Dashboard</span>
+                    <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </div>
+            </a>
+            <% }) %>
+
+                <% if (workspaces.length===0) { %>
+                    <div
+                        class="col-span-full py-12 text-center bg-white rounded-2xl border border-dashed border-slate-200">
+                        <div
+                            class="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                                </path>
+                            </svg>
+                        </div>
+                        <h3 class="text-slate-900 font-semibold">No workspaces yet</h3>
+                        <p class="text-slate-500 text-sm mt-1">Create your first brand folder to start organizing.</p>
+                    </div>
+                    <% } %>
+    </div>
+
+    <!-- Create Workspace Modal -->
+    <div id="add-workspace-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title"
+        role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" aria-hidden="true"
+                onclick="toggleModal('add-workspace-modal')"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div
+                class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-100">
+                <div class="bg-white px-8 pt-8 pb-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-slate-900" id="modal-title">New Workspace</h3>
+                        <button onclick="toggleModal('add-workspace-modal')"
+                            class="text-slate-400 hover:text-slate-600 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div id="modal-error"
+                        class="hidden mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl font-medium">
+                    </div>
+
+                    <form id="add-workspace-form" class="space-y-5">
+                        <div>
+                            <label
+                                class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Workspace
+                                Name</label>
+                            <input type="text" name="name" required placeholder="e.g. Loan Factory"
+                                class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
+                        </div>
+                    </form>
+                </div>
+                <div class="bg-slate-50 px-8 py-6 flex flex-row-reverse gap-3">
+                    <button form="add-workspace-form" type="submit" id="save-btn"
+                        class="inline-flex justify-center px-6 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md active:scale-95">
+                        Create
+                    </button>
+                    <button onclick="toggleModal('add-workspace-modal')"
+                        class="inline-flex justify-center px-6 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-xl hover:bg-slate-50 transition-all">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                const errorDiv = document.getElementById('modal-error');
+                if (errorDiv) errorDiv.classList.add('hidden');
+            }
+        }
+    }
+
+    const wsForm = document.getElementById('add-workspace-form');
+    const saveBtn = document.getElementById('save-btn');
+    const modalError = document.getElementById('modal-error');
+
+    if (wsForm) {
+        wsForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            modalError.classList.add('hidden');
+            saveBtn.disabled = true;
+            saveBtn.innerText = 'Creating...';
+
+            const formData = new FormData(wsForm);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch('/api/workspaces', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    modalError.innerText = result.error?.message || 'Failed to create workspace.';
+                    modalError.classList.remove('hidden');
+                }
+            } catch (err) {
+                modalError.innerText = 'A network error occurred.';
+                modalError.classList.remove('hidden');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerText = 'Create';
+            }
+        });
+    }
+</script>

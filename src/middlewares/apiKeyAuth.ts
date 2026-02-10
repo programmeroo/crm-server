@@ -13,8 +13,8 @@ export function createApiKeyAuth(authService: AuthService) {
 
     try {
       const { user, scopes } = await authService.validateApiKey(key);
-      req.apiUser = user;
-      req.apiScopes = scopes;
+      (req as any).apiUser = user;
+      (req as any).apiScopes = scopes;
       next();
     } catch (err) {
       next(err);

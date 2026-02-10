@@ -1,13 +1,17 @@
-import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Workspace } from './Workspace.entity';
+import { User } from './User.entity';
 
 @Entity('base_contacts')
 export class BaseContact {
-  @PrimaryColumn('text')
-  id!: string;
+  @PrimaryGeneratedColumn()
+  id!: number;
 
-  @Column('text')
-  workspace_id!: string;
+  @Column('integer')
+  user_id!: number;
+
+  @Column('integer', { nullable: true })
+  workspace_id!: number | null;
 
   @Column('text', { default: () => "CURRENT_TIMESTAMP" })
   created_on!: string;
@@ -27,7 +31,11 @@ export class BaseContact {
   @Column('text', { nullable: true })
   company!: string | null;
 
-  @ManyToOne(() => Workspace, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user!: User;
+
+  @ManyToOne(() => Workspace, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'workspace_id' })
-  workspace!: Workspace;
+  workspace!: Workspace | null;
 }
