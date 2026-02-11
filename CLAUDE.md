@@ -98,17 +98,17 @@ WHERE workspace_id IS NULL;
 
 -- Contact Lists
 CREATE TABLE contact_lists (
-  id            TEXT PRIMARY KEY,
-  workspace_id  TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  workspace_id  INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   name          TEXT NOT NULL,
-  is_primary    INTEGER DEFAULT 0,
   created_at    TEXT DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(workspace_id, name)
 );
 
 CREATE TABLE contact_list_assignments (
-  contact_id    TEXT NOT NULL REFERENCES base_contacts(id) ON DELETE CASCADE,
-  list_id       TEXT NOT NULL REFERENCES contact_lists(id) ON DELETE CASCADE,
+  contact_id    INTEGER NOT NULL REFERENCES base_contacts(id) ON DELETE CASCADE,
+  list_id       INTEGER NOT NULL REFERENCES contact_lists(id) ON DELETE CASCADE,
+  is_primary    INTEGER DEFAULT 0,
   assigned_at   TEXT DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (contact_id, list_id)
 );
@@ -242,8 +242,8 @@ CREATE INDEX idx_workspace_email_providers_workspace_id ON workspace_email_provi
 | 6 | Base Contacts (v1.5) | complete |
 | 7 | Contact Lists | complete |
 | 8 | Custom Fields (EAV) | complete |
-| 9 | Templates & AI Generation | complete |
-| 10 | Campaigns | not started |
+| 9 | Prompts - Markdown File-Based | complete |
+| 10 | Campaigns | complete |
 | ... | ... | ... |
 | 15 | Dashboard Layout & Auth Views | complete (matches wireframe) |
 | 16 | Contact List & Detail Views | complete (matches wireframe) |
@@ -305,12 +305,64 @@ Record any changes from the plan here as they happen during implementation.
 - **Dashboard Design**: AI Insights intentionally compact (white bg, 2 insights max, "View All" link) - documented in project-specification-v1-5.md
 - **Contacts List**: Fully redesigned to match wireframe - proper columns, filters, bulk actions, action icons
 - **Testing Strategy**: Per user request, focus on app functionality first, defer test fixes (UUID→Integer conversion)
-- **Prompt 9: Templates & AI Generation**: Complete
-  - Entity: `Template.entity.ts` (INTEGER PK, workspace-scoped)
-  - Three template types: `html`, `text`, `mixed` (for HTML with embedded images)
-  - Service: `TemplateService.ts` with CRUD + `generateWithAI()` method using OpenAI Chat API
-  - Controller: `TemplateController.ts` with REST endpoints (GET, POST, PUT, DELETE, POST /generate)
-  - Tests: `template.test.ts` with 19 passing tests (service + API coverage, workspace isolation, duplicate detection, AI generation)
-  - AI Integration: Uses OpenAI GPT-4 with JSON mode for structured responses. Gracefully handles missing API key (only blocks AI generation, not CRUD)
-  - OpenAI package added to dependencies (`npm install openai`)
-  - Environment: `env.ts` updated with `openaiApiKey` field
+  - **tsconfig.json**: Updated to exclude test files from build: `"exclude": ["node_modules", "dist", "src/**/*.test.ts"]`
+  - This allows app to build successfully despite failing tests (which will be fixed in future prompt)
+- **Prompt 9: Prompts - Markdown File-Based**: Complete
+  - Service: `PromptFileService.ts` - File I/O with gray-matter YAML frontmatter parsing
+  - Controller (API): `PromptController.ts` - REST endpoints at `/api/prompts`
+  - Controller (UI): `SettingsUIController.ts` - Manages `/settings` page with Prompts tab
+  - Views: `views/settings/index.ejs` (main), `views/settings/prompt-detail.ejs` (edit)
+  - File structure: `data/prompts/{workspaceId}/{listId|All Lists}/{slug}.md`
+  - Architecture: Markdown files with YAML frontmatter (NOT database-backed)
+  - Terminology: "All Lists" for workspace-wide prompts (not "Global")
+  - List dropdown: Workspace-aware, fetches from ListService (not inferred from prompts)
+  - Access control: Workspace-scoped verification in controller
+  - Integration: Settings link in sidebar (gear icon), tabbed interface ready for future settings sections
+  - Dependencies: Added `gray-matter` for YAML parsing
+
+- **Prompt 10: Campaigns**: Complete
+  - **Entities**:
+    * `Campaign.entity.ts` - INTEGER PK, workspace-scoped, JSON columns (segment_json, schedule_json)
+    * `CampaignApproval.entity.ts` - INTEGER PK, tracks approval status and reviewer info
+  - **Service**: `CampaignService.ts` - Full CRUD + approval workflow
+    * `create()` - Auto-sets status to 'pending' (+ approval record) ONLY if workspace.name === 'Loan Factory'
+    * All other workspaces skip approval → status='draft' directly
+    * `approveCampaign()`, `rejectCampaign()` - Approval workflow with reviewer tracking
+    * `getPendingApprovalsForUser()` - Gets all pending campaigns across user's workspaces
+    * `listByWorkspace()`, `findById()`, `update()`, `delete()` - Standard CRUD
+  - **Controllers**:
+    * `CampaignController.ts` (REST API) - 8 endpoints: pending-approvals, by-workspace, CRUD, approve/reject
+    * `CampaignUIController.ts` (UI routes) - 7 routes: list, detail, create form, update, approve, reject, delete
+  - **Views**:
+    * `views/campaigns/index.ejs` - Card grid list with filters (status, type, workspace), search, create/approve/reject modals
+    * `views/campaigns/create.ejs` - Multi-step form: workspace → details → template → recipients → schedule
+    * `views/campaigns/detail.ejs` - Full campaign view with edit modals, approval section (Loan Factory only)
+  - **Database Schema**:
+    * `campaigns` table - Campaign records with types (one-off/scheduled/drip), JSON segment/schedule storage
+    * `campaign_approvals` table - Approval tracking with status (pending/approved/rejected), reviewer_id, reviewed_at
+  - **Business Logic**:
+    * **Loan Factory-Specific**: Campaigns in "Loan Factory" workspace automatically get status='pending' + approval record
+    * All other workspaces (Andy's other workspaces, Monalisa's workspaces) skip approval entirely
+    * Workspace name check: `workspace.name === 'Loan Factory'` (not user-specific or workspace-type-specific)
+  - **Access Control**: Workspace isolation - users can only create/view/approve campaigns in their own workspaces
+  - **Dashboard Integration**: DashboardController updated to fetch real pending approvals from CampaignService
+  - **App Integration**:
+    * `CampaignService` instantiated in app.ts
+    * `CampaignController` mounted at `/api/campaigns`
+    * `CampaignUIController` mounted at `/campaigns`
+  - **Key Features**:
+    * Multi-step campaign creation form with Loan Factory warning banner
+    * Campaign types: one-off, scheduled, drip
+    * Recipient segmentation: whole list, filtered, manual selection (advanced options deferred to detail page)
+    * Schedule types: immediate, one-time, drip sequences
+    * Optional template selection during creation
+    * Full CRUD via API and UI
+    * Approval workflow with reviewer notes and timestamps
+    * Dashboard widget shows real pending approvals (not hardcoded mock data)
+  - **Testing**: Deferred per user request - test files excluded from build (tsconfig.json excludes *.test.ts)
+  - **Routes**:
+    * UI: GET /campaigns (list), GET /campaigns/new (create form), GET /campaigns/:id (detail)
+    * UI: POST /campaigns (create), POST /campaigns/:id (update), DELETE /campaigns/:id
+    * UI: POST /campaigns/:id/approve, POST /campaigns/:id/reject
+    * API: GET /api/campaigns/pending-approvals, GET /api/campaigns/by-workspace/:workspaceId
+    * API: POST/PUT/DELETE /api/campaigns/:id, POST /api/campaigns/:id/approve, POST /api/campaigns/:id/reject

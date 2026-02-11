@@ -103,6 +103,15 @@ Per wireframe specification, the contacts list includes:
 - **Bulk Actions** - Toolbar appears when contacts are selected: Send Email, Export Selected, Delete
 - **Export** - CSV export for all or selected contacts
 
+### Settings Page (`/settings`)
+- **Prompts Tab** - Manages prompt library (default tab)
+- **Filters** - Workspace dropdown, List dropdown (workspace-aware, fetches from ListService)
+- **Table Columns** - Name, Workspace, List, Last Updated, Actions
+- **Create Modal** - Workspace required, List optional (defaults to "All Lists" for workspace-wide)
+- **Detail View** - Edit prompt name, description, content; metadata sidebar shows workspace, list, created/updated timestamps
+- **Storage** - Files stored as markdown with YAML frontmatter in `data/prompts/`
+- **Terminology** - "All Lists" for workspace-wide prompts (not workspace-specific)
+
 ## 4. Revised Implementation Plan (v1.5)
 
 The implementation order remains similar, but Prompt 5 (Workspaces) and Prompt 6 (Base Contacts) are updated to reflect the new ownership model.
@@ -117,7 +126,55 @@ The implementation order remains similar, but Prompt 5 (Workspaces) and Prompt 6
 | 6 | Base Contacts (v1.5) | done |
 | 7 | Contact Lists | done |
 | 8 | Custom Fields (EAV) | done |
-| 9 | Templates & AI Generation | done |
-| 10 | Campaigns | not started |
+| 9 | Prompts - Markdown File-Based | done |
+| 10 | Campaigns | done |
 
 [Detailed prompts follow in the prompt-plan-v1-5.md file]
+
+## Campaign Schema (Prompt 10)
+
+```sql
+-- Campaigns (Email marketing campaigns with optional approval workflow)
+CREATE TABLE campaigns (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  workspace_id    INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  name            TEXT NOT NULL,
+  type            TEXT NOT NULL CHECK(type IN ('one-off','scheduled','drip')),
+  template_id     INTEGER REFERENCES templates(id) ON DELETE SET NULL,
+  segment_json    TEXT,        -- JSON: { type: 'whole_list'|'filtered'|'manual', listId?, filters?, contactIds? }
+  schedule_json   TEXT,        -- JSON: { type: 'immediate'|'once'|'drip', sendAt?, steps? }
+  status          TEXT DEFAULT 'draft',  -- draft|pending|approved|cancelled
+  created_at      TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Campaign Approvals (Loan Factory-specific workflow)
+CREATE TABLE campaign_approvals (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  campaign_id     INTEGER NOT NULL UNIQUE REFERENCES campaigns(id) ON DELETE CASCADE,
+  status          TEXT DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+  reviewer_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  notes           TEXT,
+  created_at      TEXT DEFAULT CURRENT_TIMESTAMP,
+  reviewed_at     TEXT
+);
+```
+
+### Campaign Workflow (Loan Factory-Specific)
+
+**Approval Activation Rule**: Only campaigns in the "Loan Factory" workspace require approval.
+
+1. **Campaign Creation**:
+   - If `workspace.name === 'Loan Factory'`: status → 'pending', CampaignApproval record created
+   - All other workspaces: status → 'draft' (no approval needed)
+
+2. **Approval States**:
+   - `pending` - Awaiting approval from user with workspace access
+   - `approved` - Team lead approved, ready to send
+   - `rejected` - Team lead rejected, marked as 'cancelled' in campaign
+
+3. **User Experience**:
+   - Draft campaigns show "Edit" button
+   - Pending campaigns show "Approve" and "Reject" buttons
+   - Approved campaigns show "Send Campaign" button
+   - Dashboard displays real pending approvals from CampaignService

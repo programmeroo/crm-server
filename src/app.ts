@@ -13,6 +13,8 @@ import { ContactService } from './services/ContactService';
 import { ListService } from './services/ListService';
 import { CustomFieldService } from './services/CustomFieldService';
 import { TemplateService } from './services/TemplateService';
+import { PromptFileService } from './services/PromptFileService';
+import { CampaignService } from './services/CampaignService';
 import { AuthController } from './controllers/AuthController';
 import { AuditController } from './controllers/AuditController';
 import { WorkspaceController } from './controllers/WorkspaceController';
@@ -20,9 +22,14 @@ import { ContactController } from './controllers/ContactController';
 import { ListController } from './controllers/ListController';
 import { CustomFieldController } from './controllers/CustomFieldController';
 import { TemplateController } from './controllers/TemplateController';
+import { PromptController } from './controllers/PromptController';
 import { DashboardController } from './controllers/DashboardController';
+import { SettingsUIController } from './controllers/SettingsUIController';
 import { ContactUIController } from './controllers/ContactUIController';
 import { WorkspaceUIController } from './controllers/WorkspaceUIController';
+import { TemplateUIController } from './controllers/TemplateUIController';
+import { CampaignController } from './controllers/CampaignController';
+import { CampaignUIController } from './controllers/CampaignUIController';
 import { createApiKeyAuth } from './middlewares/apiKeyAuth';
 import { createAuditMiddleware } from './middlewares/auditMiddleware';
 import expressLayouts from 'express-ejs-layouts';
@@ -88,6 +95,8 @@ export function createApp(dataSource: DataSource): express.Application {
   const listService = new ListService(dataSource);
   const customFieldService = new CustomFieldService(dataSource);
   const templateService = new TemplateService(dataSource);
+  const promptFileService = new PromptFileService();
+  const campaignService = new CampaignService(dataSource);
 
   // Audit middleware (cross-cutting, before routes)
   app.use(createAuditMiddleware(auditService));
@@ -148,7 +157,7 @@ export function createApp(dataSource: DataSource): express.Application {
   app.use('/api/workspaces', workspaceController.router);
 
   // Dashboard (UI)
-  const dashboardController = new DashboardController(workspaceService, contactService);
+  const dashboardController = new DashboardController(workspaceService, contactService, campaignService);
   app.use('/dashboard', dashboardController.router);
 
   // Redirect root to dashboard
@@ -174,6 +183,15 @@ export function createApp(dataSource: DataSource): express.Application {
   const contactUIController = new ContactUIController(contactService, workspaceService, customFieldService, listService);
   app.use('/contacts', contactUIController.router);
 
+  const templateUIController = new TemplateUIController(templateService, workspaceService);
+  app.use('/templates', templateUIController.router);
+
+  const campaignUIController = new CampaignUIController(campaignService, workspaceService, templateService, listService);
+  app.use('/campaigns', campaignUIController.router);
+
+  const settingsUIController = new SettingsUIController(promptFileService, workspaceService, listService);
+  app.use('/settings', settingsUIController.router);
+
   // API - Contacts
   const contactController = new ContactController(contactService, workspaceService);
   app.use('/api/contacts', contactController.router);
@@ -189,6 +207,14 @@ export function createApp(dataSource: DataSource): express.Application {
   // Templates
   const templateController = new TemplateController(templateService, workspaceService);
   app.use('/api/templates', templateController.router);
+
+  // Campaigns
+  const campaignController = new CampaignController(campaignService, workspaceService);
+  app.use('/api/campaigns', campaignController.router);
+
+  // Prompts
+  const promptController = new PromptController(promptFileService, workspaceService, listService);
+  app.use('/api/prompts', promptController.router);
 
   // Audit logs
   const auditController = new AuditController(auditService);

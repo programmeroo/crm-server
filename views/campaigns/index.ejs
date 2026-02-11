@@ -1,0 +1,381 @@
+<div class="container mx-auto px-4 py-8">
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-8">
+    <h1 class="text-4xl font-bold">Campaigns</h1>
+    <button onclick="openNewCampaignModal()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">
+      + New Campaign
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <!-- Search -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+        <input type="text" id="searchInput" placeholder="Campaign name..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" onkeyup="filterCampaigns()">
+      </div>
+
+      <!-- Workspace Filter -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Workspace</label>
+        <select id="workspaceFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="filterCampaigns()">
+          <option value="">All Workspaces</option>
+          <% workspaces.forEach(ws => { %>
+            <option value="<%= ws.id %>"><%= ws.name %></option>
+          <% }); %>
+        </select>
+      </div>
+
+      <!-- Status Filter -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+        <select id="statusFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="filterCampaigns()">
+          <option value="">All Statuses</option>
+          <option value="draft">Draft</option>
+          <option value="pending">Pending Approval</option>
+          <option value="approved">Approved</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+
+      <!-- Type Filter -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Type</label>
+        <select id="typeFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="filterCampaigns()">
+          <option value="">All Types</option>
+          <option value="one-off">One-Off</option>
+          <option value="scheduled">Scheduled</option>
+          <option value="drip">Drip</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Clear Filters Button -->
+    <div class="mt-4">
+      <button onclick="clearFilters()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">
+        Clear Filters
+      </button>
+    </div>
+  </div>
+
+  <!-- Campaigns Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <% campaigns.forEach(campaign => { %>
+      <div class="bg-white rounded-lg shadow-md p-6 campaign-card" data-workspace="<%= campaign.workspace_id %>" data-status="<%= campaign.status %>" data-type="<%= campaign.type %>" data-name="<%= campaign.name %>">
+        <!-- Header -->
+        <div class="mb-4">
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="text-xl font-bold text-gray-900"><%= campaign.name %></h3>
+            <!-- Status Badge -->
+            <span class="px-3 py-1 text-sm font-semibold rounded-full <%=
+              campaign.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+              campaign.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+              campaign.status === 'approved' ? 'bg-green-100 text-green-800' :
+              'bg-red-100 text-red-800'
+            %>">
+              <%= campaign.status === 'pending' ? 'Pending Approval' :
+                  campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1) %>
+            </span>
+          </div>
+          <p class="text-sm text-gray-500">
+            <strong>Created:</strong>
+            <% const date = new Date(campaign.created_at); %>
+            <%= date.toLocaleDateString() %>
+          </p>
+        </div>
+
+        <!-- Details -->
+        <div class="mb-4 space-y-2">
+          <p class="text-sm text-gray-700">
+            <strong>Type:</strong>
+            <%= campaign.type === 'one-off' ? 'One-Off' :
+                campaign.type === 'scheduled' ? 'Scheduled' : 'Drip' %>
+          </p>
+          <p class="text-sm text-gray-700">
+            <strong>Template:</strong>
+            <%= campaign.template ? campaign.template.name : 'None' %>
+          </p>
+          <% if (campaign.segment_json) { %>
+            <p class="text-sm text-gray-700">
+              <strong>Recipients:</strong>
+              <%
+                try {
+                  const segment = JSON.parse(campaign.segment_json);
+                  let recipientInfo = 'All contacts';
+                  if (segment.type === 'filtered') {
+                    recipientInfo = 'Filtered list';
+                  } else if (segment.type === 'manual') {
+                    recipientInfo = (segment.contactIds ? segment.contactIds.length : 0) + ' selected';
+                  } else if (segment.listId) {
+                    recipientInfo = 'From list';
+                  }
+              %>
+                <%= recipientInfo %>
+              <% } catch(e) { %>
+                Unknown
+              <% } %>
+            </p>
+          <% } %>
+        </div>
+
+        <!-- Approval Info (if pending) -->
+        <% if (campaign.status === 'pending' && campaign.approval) { %>
+          <div class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p class="text-sm text-yellow-800">
+              <strong>Awaiting approval</strong> from team leads
+            </p>
+          </div>
+        <% } %>
+
+        <!-- Approval Status (if approved/rejected) -->
+        <% if ((campaign.status === 'approved' || campaign.status === 'cancelled') && campaign.approval && campaign.approval.reviewed_at) { %>
+          <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p class="text-sm text-blue-800">
+              <strong>Reviewed:</strong>
+              <% const reviewDate = new Date(campaign.approval.reviewed_at); %>
+              <%= reviewDate.toLocaleDateString() %>
+            </p>
+            <% if (campaign.approval.notes) { %>
+              <p class="text-sm text-blue-800 mt-1"><strong>Notes:</strong> <%= campaign.approval.notes %></p>
+            <% } %>
+          </div>
+        <% } %>
+
+        <!-- Actions -->
+        <div class="flex gap-2 flex-wrap">
+          <!-- View/Edit Button -->
+          <a href="/campaigns/<%= campaign.id %>" class="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-center font-medium text-sm">
+            View
+          </a>
+
+          <!-- Delete Button -->
+          <button onclick="deleteCampaign(<%= campaign.id %>)" class="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium text-sm">
+            Delete
+          </button>
+
+          <!-- Draft Campaign Actions -->
+          <% if (campaign.status === 'draft') { %>
+            <!-- Edit (already accessible via View link) -->
+            <button onclick="editCampaign(<%= campaign.id %>)" class="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 font-medium text-sm">
+              Edit
+            </button>
+          <% } %>
+
+          <!-- Pending Approval Actions (Loan Factory only) -->
+          <% if (campaign.status === 'pending') { %>
+            <button onclick="approveCampaignModal(<%= campaign.id %>, '<%= campaign.name %>')" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm">
+              Approve
+            </button>
+            <button onclick="rejectCampaignModal(<%= campaign.id %>, '<%= campaign.name %>')" class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm">
+              Reject
+            </button>
+          <% } %>
+        </div>
+      </div>
+    <% }); %>
+  </div>
+
+  <!-- Empty State -->
+  <% if (campaigns.length === 0) { %>
+    <div class="bg-white rounded-lg shadow-md p-12 text-center">
+      <p class="text-gray-500 text-lg mb-4">No campaigns yet</p>
+      <button onclick="openNewCampaignModal()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">
+        Create Your First Campaign
+      </button>
+    </div>
+  <% } %>
+</div>
+
+<!-- New Campaign Modal -->
+<div id="newCampaignModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+    <h2 class="text-2xl font-bold mb-4">Create Campaign</h2>
+    <p class="text-gray-600 mb-6">You'll be guided through a multi-step form to set up your campaign, including workspace, template, recipients, and scheduling.</p>
+
+    <div class="flex gap-2 justify-end">
+      <button type="button" onclick="closeNewCampaignModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+        Cancel
+      </button>
+      <button type="button" onclick="createCampaign()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">
+        Start
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Approve Campaign Modal -->
+<div id="approveCampaignModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+    <h2 class="text-2xl font-bold mb-4">Approve Campaign</h2>
+    <p id="approveCampaignName" class="text-gray-700 mb-4"></p>
+    <form onsubmit="submitApproveCampaign(event)">
+      <input type="hidden" id="approveCampaignId">
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Approval Notes (Optional)</label>
+        <textarea id="approveNotes" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows="4" placeholder="Add any approval notes..."></textarea>
+      </div>
+
+      <div class="flex gap-2 justify-end">
+        <button type="button" onclick="closeApproveCampaignModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+          Cancel
+        </button>
+        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">
+          Approve
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Reject Campaign Modal -->
+<div id="rejectCampaignModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+    <h2 class="text-2xl font-bold mb-4">Reject Campaign</h2>
+    <p id="rejectCampaignName" class="text-gray-700 mb-4"></p>
+    <form onsubmit="submitRejectCampaign(event)">
+      <input type="hidden" id="rejectCampaignId">
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Rejection Reason</label>
+        <textarea id="rejectNotes" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows="4" placeholder="Explain why this campaign is being rejected..." required></textarea>
+      </div>
+
+      <div class="flex gap-2 justify-end">
+        <button type="button" onclick="closeRejectCampaignModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+          Cancel
+        </button>
+        <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold">
+          Reject
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openNewCampaignModal() {
+  document.getElementById('newCampaignModal').classList.remove('hidden');
+}
+
+function closeNewCampaignModal() {
+  document.getElementById('newCampaignModal').classList.add('hidden');
+}
+
+function approveCampaignModal(id, name) {
+  document.getElementById('approveCampaignId').value = id;
+  document.getElementById('approveCampaignName').textContent = `Approve "${name}"?`;
+  document.getElementById('approveCampaignModal').classList.remove('hidden');
+}
+
+function closeApproveCampaignModal() {
+  document.getElementById('approveCampaignModal').classList.add('hidden');
+}
+
+function rejectCampaignModal(id, name) {
+  document.getElementById('rejectCampaignId').value = id;
+  document.getElementById('rejectCampaignName').textContent = `Reject "${name}"?`;
+  document.getElementById('rejectCampaignModal').classList.remove('hidden');
+}
+
+function closeRejectCampaignModal() {
+  document.getElementById('rejectCampaignModal').classList.add('hidden');
+}
+
+function createCampaign(event) {
+  event.preventDefault();
+  // Redirect to create form
+  window.location.href = '/campaigns/new';
+}
+
+function editCampaign(id) {
+  window.location.href = '/campaigns/' + id;
+}
+
+function deleteCampaign(id) {
+  if (!confirm('Are you sure you want to delete this campaign?')) return;
+
+  fetch('/api/campaigns/' + id, { method: 'DELETE' })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        alert('Error: ' + data.error.message);
+      } else {
+        location.reload();
+      }
+    })
+    .catch(err => alert('Failed to delete campaign: ' + err.message));
+}
+
+function submitApproveCampaign(event) {
+  event.preventDefault();
+
+  const id = document.getElementById('approveCampaignId').value;
+  const notes = document.getElementById('approveNotes').value;
+
+  fetch('/api/campaigns/' + id + '/approve', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ notes })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) {
+      alert('Error: ' + data.error.message);
+    } else {
+      closeApproveCampaignModal();
+      location.reload();
+    }
+  })
+  .catch(err => alert('Failed to approve campaign: ' + err.message));
+}
+
+function submitRejectCampaign(event) {
+  event.preventDefault();
+
+  const id = document.getElementById('rejectCampaignId').value;
+  const notes = document.getElementById('rejectNotes').value;
+
+  fetch('/api/campaigns/' + id + '/reject', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ notes })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) {
+      alert('Error: ' + data.error.message);
+    } else {
+      closeRejectCampaignModal();
+      location.reload();
+    }
+  })
+  .catch(err => alert('Failed to reject campaign: ' + err.message));
+}
+
+function filterCampaigns() {
+  const searchValue = document.getElementById('searchInput').value.toLowerCase();
+  const workspaceValue = document.getElementById('workspaceFilter').value;
+  const statusValue = document.getElementById('statusFilter').value;
+  const typeValue = document.getElementById('typeFilter').value;
+
+  document.querySelectorAll('.campaign-card').forEach(card => {
+    const matches =
+      (!searchValue || card.dataset.name.toLowerCase().includes(searchValue)) &&
+      (!workspaceValue || card.dataset.workspace === workspaceValue) &&
+      (!statusValue || card.dataset.status === statusValue) &&
+      (!typeValue || card.dataset.type === typeValue);
+
+    card.style.display = matches ? 'block' : 'none';
+  });
+}
+
+function clearFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('workspaceFilter').value = '';
+  document.getElementById('statusFilter').value = '';
+  document.getElementById('typeFilter').value = '';
+  filterCampaigns();
+}
+</script>

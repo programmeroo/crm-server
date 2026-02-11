@@ -1,0 +1,348 @@
+<div class="container mx-auto px-4 py-8">
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-8">
+    <h1 class="text-4xl font-bold">Create Campaign</h1>
+    <a href="/campaigns" class="text-gray-600 hover:text-gray-800">← Back to Campaigns</a>
+  </div>
+
+  <!-- Form -->
+  <form onsubmit="submitCreateCampaign(event)" class="max-w-4xl">
+    <div class="bg-white rounded-lg shadow-md p-8">
+      <!-- Loan Factory Warning -->
+      <div id="loanFactoryWarning" class="hidden mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <p class="text-yellow-800">
+          <strong>Note:</strong> Campaigns created in this workspace will require approval from team leads before sending.
+        </p>
+      </div>
+
+      <!-- Step 1: Workspace Selection -->
+      <div class="mb-8 pb-8 border-b">
+        <h2 class="text-2xl font-bold mb-6">1. Workspace</h2>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Select Workspace</label>
+          <select id="workspaceSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="updateWorkspaceInfo()" required>
+            <option value="">Choose workspace...</option>
+            <% workspaces.forEach(ws => { %>
+              <option value="<%= ws.id %>" data-name="<%= ws.name %>"><%= ws.name %></option>
+            <% }); %>
+          </select>
+        </div>
+      </div>
+
+      <!-- Step 2: Campaign Basics -->
+      <div class="mb-8 pb-8 border-b">
+        <h2 class="text-2xl font-bold mb-6">2. Campaign Details</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Campaign Name</label>
+            <input type="text" id="campaignName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., Spring Sale 2024" required>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Campaign Type</label>
+            <select id="campaignType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="updateScheduleVisibility()" required>
+              <option value="">Select type...</option>
+              <option value="one-off">One-Off Campaign</option>
+              <option value="scheduled">Scheduled Campaign</option>
+              <option value="drip">Drip Campaign</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Template Selection -->
+      <div class="mb-8 pb-8 border-b">
+        <h2 class="text-2xl font-bold mb-6">3. Email Template</h2>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Template (Optional)</label>
+          <select id="templateSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">No template - I'll compose the email later</option>
+            <span id="templateOptions"></span>
+          </select>
+          <p class="text-sm text-gray-500 mt-2">You can also create and manage templates in the <a href="/settings?tab=templates" class="text-blue-600 hover:underline">Settings</a></p>
+        </div>
+      </div>
+
+      <!-- Step 4: Recipients/Segment -->
+      <div class="mb-8 pb-8 border-b">
+        <h2 class="text-2xl font-bold mb-6">4. Recipients</h2>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-3">Who should receive this campaign?</label>
+            <div class="space-y-3">
+              <div class="flex items-center">
+                <input type="radio" id="segmentWholeList" name="segmentType" value="whole_list" class="h-4 w-4 text-blue-600" onchange="updateSegmentUI()" checked>
+                <label for="segmentWholeList" class="ml-3 text-gray-700">All contacts in a list</label>
+              </div>
+              <div class="flex items-center">
+                <input type="radio" id="segmentFiltered" name="segmentType" value="filtered" class="h-4 w-4 text-blue-600" onchange="updateSegmentUI()">
+                <label for="segmentFiltered" class="ml-3 text-gray-700">Filtered contacts (based on criteria)</label>
+              </div>
+              <div class="flex items-center">
+                <input type="radio" id="segmentManual" name="segmentType" value="manual" class="h-4 w-4 text-blue-600" onchange="updateSegmentUI()">
+                <label for="segmentManual" class="ml-3 text-gray-700">Manually select specific contacts</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Whole List Option -->
+          <div id="wholeListUI" class="mt-6 p-4 bg-gray-50 rounded-lg">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Select List</label>
+            <select id="listSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="updateRecipientCount()">
+              <option value="">Choose a list...</option>
+              <span id="listOptions"></span>
+            </select>
+            <p id="recipientCountText" class="text-sm text-gray-500 mt-2"></p>
+          </div>
+
+          <!-- Filtered Option (placeholder for now) -->
+          <div id="filteredUI" class="hidden mt-6 p-4 bg-gray-50 rounded-lg">
+            <p class="text-sm text-gray-600 mb-4">Advanced filtering will be available in the detail view after campaign creation.</p>
+          </div>
+
+          <!-- Manual Option (placeholder for now) -->
+          <div id="manualUI" class="hidden mt-6 p-4 bg-gray-50 rounded-lg">
+            <p class="text-sm text-gray-600 mb-4">Manual contact selection will be available in the detail view after campaign creation.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5: Schedule (Conditional) -->
+      <div id="scheduleSection" class="mb-8 pb-8 border-b">
+        <h2 class="text-2xl font-bold mb-6">5. Schedule</h2>
+
+        <div class="space-y-4">
+          <div id="immediateOption" class="hidden">
+            <div class="flex items-center">
+              <input type="radio" id="scheduleImmediate" name="scheduleType" value="immediate" class="h-4 w-4 text-blue-600" checked>
+              <label for="scheduleImmediate" class="ml-3 text-gray-700">Send immediately</label>
+            </div>
+          </div>
+
+          <div id="scheduledOption" class="hidden">
+            <div class="flex items-center">
+              <input type="radio" id="scheduleOnce" name="scheduleType" value="once" class="h-4 w-4 text-blue-600">
+              <label for="scheduleOnce" class="ml-3 text-gray-700">Send on a specific date/time</label>
+            </div>
+            <div id="scheduleOnceUI" class="hidden ml-7 mt-3 p-3 bg-gray-50 rounded-lg">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Send Date & Time</label>
+              <input type="datetime-local" id="sendDateTime" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+          </div>
+
+          <div id="dripOption" class="hidden">
+            <div class="flex items-center">
+              <input type="radio" id="scheduleDrip" name="scheduleType" value="drip" class="h-4 w-4 text-blue-600">
+              <label for="scheduleDrip" class="ml-3 text-gray-700">Drip campaign (multiple emails over time)</label>
+            </div>
+            <div id="scheduleDripUI" class="hidden ml-7 mt-3 p-3 bg-gray-50 rounded-lg">
+              <p class="text-sm text-gray-600 mb-4">Drip campaign details can be configured in the detail view after campaign creation.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex gap-4 justify-end">
+        <a href="/campaigns" class="px-6 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-semibold">
+          Cancel
+        </a>
+        <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">
+          Create Campaign
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+function updateWorkspaceInfo() {
+  const workspaceId = document.getElementById('workspaceSelect').value;
+  const selectElement = document.getElementById('workspaceSelect');
+  const workspaceName = selectElement.options[selectElement.selectedIndex]?.getAttribute('data-name') || '';
+
+  // Show warning for Loan Factory
+  const warningDiv = document.getElementById('loanFactoryWarning');
+  if (workspaceName === 'Loan Factory') {
+    warningDiv.classList.remove('hidden');
+  } else {
+    warningDiv.classList.add('hidden');
+  }
+
+  // Update template dropdown
+  updateTemplateOptions(workspaceId);
+
+  // Update list dropdown
+  updateListOptions(workspaceId);
+}
+
+function updateTemplateOptions(workspaceId) {
+  const templateSelect = document.getElementById('templateSelect');
+  const container = document.getElementById('templateOptions');
+  container.innerHTML = '';
+
+  if (!workspaceId) return;
+
+  <% workspaces.forEach(ws => { %>
+    if ('<%= ws.id %>' === workspaceId) {
+      <% ws.templates.forEach(template => { %>
+        const option = document.createElement('option');
+        option.value = '<%= template.id %>';
+        option.textContent = '<%= template.name %>';
+        container.appendChild(option);
+      <% }); %>
+    }
+  <% }); %>
+}
+
+function updateListOptions(workspaceId) {
+  const listSelect = document.getElementById('listSelect');
+  const container = document.getElementById('listOptions');
+  container.innerHTML = '';
+
+  if (!workspaceId) return;
+
+  // Fetch lists for this workspace via API
+  fetch('/api/lists/by-workspace/' + workspaceId)
+    .then(r => r.json())
+    .then(data => {
+      if (data.data && Array.isArray(data.data)) {
+        data.data.forEach(list => {
+          const option = document.createElement('option');
+          option.value = list.id;
+          option.textContent = list.name + ' (' + (list.contactCount || 0) + ' contacts)';
+          container.appendChild(option);
+        });
+      }
+    })
+    .catch(err => console.error('Error loading lists:', err));
+}
+
+function updateSegmentUI() {
+  const segmentType = document.querySelector('input[name="segmentType"]:checked').value;
+
+  document.getElementById('wholeListUI').classList.toggle('hidden', segmentType !== 'whole_list');
+  document.getElementById('filteredUI').classList.toggle('hidden', segmentType !== 'filtered');
+  document.getElementById('manualUI').classList.toggle('hidden', segmentType !== 'manual');
+
+  updateRecipientCount();
+}
+
+function updateRecipientCount() {
+  const segmentType = document.querySelector('input[name="segmentType"]:checked').value;
+  const countText = document.getElementById('recipientCountText');
+
+  if (segmentType === 'whole_list') {
+    const listId = document.getElementById('listSelect').value;
+    if (listId) {
+      fetch('/api/lists/' + listId)
+        .then(r => r.json())
+        .then(data => {
+          const count = data.data?.contactCount || 0;
+          countText.textContent = count + ' contacts will receive this campaign';
+        })
+        .catch(err => {
+          countText.textContent = 'Unable to load contact count';
+        });
+    } else {
+      countText.textContent = '';
+    }
+  } else {
+    countText.textContent = '';
+  }
+}
+
+function updateScheduleVisibility() {
+  const campaignType = document.getElementById('campaignType').value;
+
+  // Show schedule section for all types
+  document.getElementById('scheduleSection').classList.remove('hidden');
+
+  // Update visible schedule options based on campaign type
+  if (campaignType === 'one-off') {
+    document.getElementById('immediateOption').classList.remove('hidden');
+    document.getElementById('scheduledOption').classList.add('hidden');
+    document.getElementById('dripOption').classList.add('hidden');
+  } else if (campaignType === 'scheduled') {
+    document.getElementById('immediateOption').classList.add('hidden');
+    document.getElementById('scheduledOption').classList.remove('hidden');
+    document.getElementById('dripOption').classList.add('hidden');
+    document.getElementById('scheduleOnceUI').classList.remove('hidden');
+  } else if (campaignType === 'drip') {
+    document.getElementById('immediateOption').classList.add('hidden');
+    document.getElementById('scheduledOption').classList.add('hidden');
+    document.getElementById('dripOption').classList.remove('hidden');
+    document.getElementById('scheduleDripUI').classList.remove('hidden');
+  }
+}
+
+function submitCreateCampaign(event) {
+  event.preventDefault();
+
+  const workspaceId = document.getElementById('workspaceSelect').value;
+  const name = document.getElementById('campaignName').value;
+  const type = document.getElementById('campaignType').value;
+  const templateId = document.getElementById('templateSelect').value || null;
+
+  // Build segment JSON
+  const segmentType = document.querySelector('input[name="segmentType"]:checked').value;
+  let segment = { type: segmentType };
+
+  if (segmentType === 'whole_list') {
+    const listId = document.getElementById('listSelect').value;
+    if (listId) {
+      segment.listId = parseInt(listId);
+    }
+  }
+
+  // Build schedule JSON
+  let schedule = {};
+  if (type === 'one-off') {
+    schedule.type = 'immediate';
+  } else if (type === 'scheduled') {
+    const sendAt = document.getElementById('sendDateTime').value;
+    if (sendAt) {
+      schedule.type = 'once';
+      schedule.sendAt = new Date(sendAt).toISOString();
+    } else {
+      schedule.type = 'immediate';
+    }
+  } else if (type === 'drip') {
+    schedule.type = 'drip';
+    schedule.steps = [];
+  }
+
+  const payload = {
+    workspaceId: parseInt(workspaceId),
+    name,
+    type,
+    templateId: templateId ? parseInt(templateId) : null,
+    segment,
+    schedule,
+  };
+
+  fetch('/api/campaigns', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) {
+      alert('Error: ' + data.error.message);
+    } else {
+      window.location.href = '/campaigns/' + data.data.id;
+    }
+  })
+  .catch(err => alert('Failed to create campaign: ' + err.message));
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+  updateSegmentUI();
+  updateScheduleVisibility();
+});
+</script>

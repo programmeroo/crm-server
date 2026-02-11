@@ -1,13 +1,15 @@
 import { Request, Response, Router } from 'express';
 import { WorkspaceService } from '../services/WorkspaceService';
 import { ContactService } from '../services/ContactService';
+import { CampaignService } from '../services/CampaignService';
 
 export class DashboardController {
     public router: Router;
 
     constructor(
         private workspaceService: WorkspaceService,
-        private contactService: ContactService
+        private contactService: ContactService,
+        private campaignService: CampaignService
     ) {
         this.router = Router();
         this.router.get('/', this.getDashboard.bind(this));
@@ -32,10 +34,32 @@ export class DashboardController {
             { label: 'Messages Sent', value: '3.2k', icon: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>' },
         ];
 
-        const pendingApprovals = [
-            { id: 1, name: 'Q4 Nurture Sequence', submittedBy: 'Andy', timeAgo: '2h ago' },
-            { id: 2, name: 'Loan Factory Welcome', submittedBy: 'System', timeAgo: '1d ago' },
-        ];
+        // Fetch real pending approvals from CampaignService
+        const pendingCampaigns = await this.campaignService.getPendingApprovalsForUser(userId);
+        const pendingApprovals = pendingCampaigns.map(campaign => {
+            const createdDate = new Date(campaign.created_at);
+            const now = new Date();
+            const diffMs = now.getTime() - createdDate.getTime();
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            let timeAgo = 'just now';
+            if (diffMins < 60) {
+                timeAgo = diffMins + 'min ago';
+            } else if (diffHours < 24) {
+                timeAgo = diffHours + 'h ago';
+            } else if (diffDays < 7) {
+                timeAgo = diffDays + 'd ago';
+            }
+
+            return {
+                id: campaign.id,
+                name: campaign.name,
+                workspaceName: campaign.workspace?.name || 'Unknown',
+                timeAgo
+            };
+        });
 
         const attentionItems = [
             { title: 'Email bounced', description: 'John Doe (john@example.com) bounced 2h ago', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>' },
@@ -67,10 +91,30 @@ export class DashboardController {
             { id: 4, name: 'Lisa Chen', list: 'Customers', tag: 'VIP', lastContact: '1 week ago', initials: 'LC' },
         ];
 
-        const campaigns = [
-            { id: 1, name: 'Q4 Nurture', type: 'Drip', status: 'Active', progress: 45, nextStep: 'Next step in 3 days' },
-            { id: 2, name: 'Welcome Series', type: 'Scheduled', status: 'Upcoming', progress: 0, nextStep: 'Starts in 5 days' },
-        ];
+        // Fetch real campaigns from CampaignService across all user workspaces
+        const allCampaigns: any[] = [];
+        const userWorkspaces = await this.workspaceService.listByUser(userId);
+        for (const workspace of userWorkspaces) {
+            const campaignsInWorkspace = await this.campaignService.listByWorkspace(workspace.id);
+            allCampaigns.push(...campaignsInWorkspace);
+        }
+
+        // Format campaigns for dashboard display
+        const campaigns = allCampaigns
+            .filter(c => c.status !== 'cancelled') // Hide cancelled campaigns
+            .slice(0, 2) // Show only the 2 most recent
+            .map(campaign => ({
+                id: campaign.id,
+                name: campaign.name,
+                type: campaign.type.charAt(0).toUpperCase() + campaign.type.slice(1),
+                status: campaign.status === 'draft' ? 'Draft' :
+                        campaign.status === 'pending' ? 'Awaiting Approval' :
+                        campaign.status === 'approved' ? 'Approved' : 'Active',
+                progress: campaign.status === 'approved' ? 75 : (campaign.status === 'pending' ? 50 : 25),
+                nextStep: campaign.status === 'pending' ? 'Awaiting team approval' :
+                          campaign.status === 'approved' ? 'Ready to send' :
+                          'In draft'
+            }));
 
         res.render('dashboard', {
             title: 'Dashboard',
