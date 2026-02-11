@@ -20,6 +20,7 @@
     "express-ejs-layouts": "^2.4.0",
     "express-rate-limit": "^7.5.0",
     "express-session": "^1.18.1",
+    "gray-matter": "^4.0.3",
     "joi": "^17.13.3",
     "openai": "^6.19.0",
     "reflect-metadata": "^0.2.2",

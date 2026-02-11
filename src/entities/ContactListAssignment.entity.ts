@@ -13,6 +13,9 @@ export class ContactListAssignment {
   @Column('text', { default: () => "CURRENT_TIMESTAMP" })
   assigned_at!: string;
 
+  @Column('integer', { default: 0 })
+  is_primary!: number;
+
   @ManyToOne(() => BaseContact, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'contact_id' })
   contact!: BaseContact;

@@ -12,9 +12,6 @@ export class ContactList {
   @Column('text')
   name!: string;
 
-  @Column('integer', { default: 0 })
-  is_primary!: number;
-
   @Column('text', { default: () => "CURRENT_TIMESTAMP" })
   created_at!: string;
 

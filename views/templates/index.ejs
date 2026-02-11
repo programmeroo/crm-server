@@ -1,0 +1,458 @@
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">Templates</h1>
+            <p class="text-sm text-slate-500 mt-1">Create and manage email templates.</p>
+        </div>
+        <button onclick="toggleModal('create-template-modal')"
+            class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-md active:scale-95">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            New Template
+        </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+        <div class="flex flex-wrap items-center gap-3">
+            <select id="workspace-filter"
+                class="bg-slate-50 border border-slate-200 text-slate-600 text-sm rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">All Workspaces</option>
+                <% workspaces.forEach(ws => { %>
+                    <option value="<%= ws.id %>"><%= ws.name %></option>
+                <% }) %>
+            </select>
+
+            <select id="type-filter"
+                class="bg-slate-50 border border-slate-200 text-slate-600 text-sm rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">All Types</option>
+                <option value="html">HTML</option>
+                <option value="text">Text</option>
+                <option value="mixed">Mixed (HTML + Images)</option>
+            </select>
+
+            <button onclick="clearFilters()"
+                class="inline-flex items-center px-3 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                Clear Filters
+            </button>
+
+            <div class="ml-auto text-sm text-slate-500">
+                <span id="filtered-count"><%= templates.length %></span> templates
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates Table -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left" id="templates-table">
+                <thead>
+                    <tr class="bg-slate-50/50 border-b border-slate-100">
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Name</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Subject</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Workspace</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Last Updated</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <% if (templates.length === 0) { %>
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center">
+                                <div class="max-w-xs mx-auto">
+                                    <div class="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <h3 class="text-slate-900 font-semibold">No templates yet</h3>
+                                    <p class="text-slate-500 text-sm mt-1">Create your first template to get started.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    <% } %>
+
+                    <% templates.forEach(template => { %>
+                        <tr class="hover:bg-slate-50/30 transition-colors template-row"
+                            data-workspace-id="<%= template.workspace_id %>"
+                            data-type="<%= template.template_type %>">
+                            <td class="px-6 py-4">
+                                <span class="text-sm font-semibold text-slate-900"><%= template.name %></span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold"
+                                    style="<% if (template.template_type === 'html') { %>background-color: #dbeafe; color: #0369a1;<% } else if (template.template_type === 'text') { %>background-color: #f1f5f9; color: #334155;<% } else { %>background-color: #fce7f3; color: #be185d;<% } %>">
+                                    <%= template.template_type.toUpperCase() %>
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-slate-600">
+                                <% if (template.subject) { %>
+                                    <%= template.subject.substring(0, 50) %><% if (template.subject.length > 50) { %>...<% } %>
+                                <% } else { %>
+                                    <span class="text-slate-400 italic">-</span>
+                                <% } %>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-slate-600">
+                                <%= template.workspaceName %>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-slate-500">
+                                <%= new Date(template.updated_at).toLocaleDateString() %>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center justify-center gap-1">
+                                    <a href="/templates/<%= template.id %>" title="View"
+                                        class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        </svg>
+                                    </a>
+                                    <button onclick="editTemplate(<%= template.id %>)" title="Edit"
+                                        class="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                        </svg>
+                                    </button>
+                                    <button onclick="deleteTemplate(<%= template.id %>, '<%= template.name.replace(/'/g, "\\'") %>')" title="Delete"
+                                        class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create Template Modal -->
+<div id="create-template-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" onclick="toggleModal('create-template-modal')"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+        <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full border border-slate-100">
+            <div class="bg-white px-8 pt-8 pb-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-slate-900">New Template</h3>
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex gap-4 mb-6 border-b border-slate-200">
+                    <button onclick="switchCreateMode('manual')" id="tab-manual"
+                        class="pb-3 px-1 text-sm font-semibold text-blue-600 border-b-2 border-blue-600">
+                        Create Manually
+                    </button>
+                    <button onclick="switchCreateMode('ai')" id="tab-ai"
+                        class="pb-3 px-1 text-sm font-medium text-slate-500 hover:text-slate-700">
+                        Generate with AI
+                    </button>
+                </div>
+
+                <!-- Manual Form -->
+                <form id="create-template-form" class="space-y-5" style="display: block;">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Workspace</label>
+                        <select name="workspaceId" required
+                            class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm text-slate-600">
+                            <option value="">Select a workspace...</option>
+                            <% workspaces.forEach(ws => { %>
+                                <option value="<%= ws.id %>"><%= ws.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Template Name</label>
+                        <input type="text" name="name" required placeholder="e.g., Welcome Email"
+                            class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Type</label>
+                            <select name="template_type" required
+                                class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm text-slate-600">
+                                <option value="html">HTML</option>
+                                <option value="text">Text</option>
+                                <option value="mixed">Mixed (HTML + Images)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Subject (optional)</label>
+                            <input type="text" name="subject" placeholder="Email subject"
+                                class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Body</label>
+                        <textarea name="body" required placeholder="Template body..." rows="6"
+                            class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm resize-none"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Preheader (optional)</label>
+                        <input type="text" name="preheader" placeholder="Preview text in email client"
+                            class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Signature (optional)</label>
+                        <textarea name="signature" placeholder="Email signature..." rows="3"
+                            class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm resize-none"></textarea>
+                    </div>
+
+                    <div id="modal-error" class="hidden p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl font-medium"></div>
+                </form>
+
+                <!-- AI Form -->
+                <form id="create-ai-template-form" class="space-y-5" style="display: none;">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Workspace</label>
+                        <select name="workspaceId" required
+                            class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm text-slate-600">
+                            <option value="">Select a workspace...</option>
+                            <% workspaces.forEach(ws => { %>
+                                <option value="<%= ws.id %>"><%= ws.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Template Name</label>
+                        <input type="text" name="name" required placeholder="e.g., Welcome Email"
+                            class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Goal</label>
+                        <input type="text" name="goal" required placeholder="e.g., Welcome new customers and encourage sign-up"
+                            class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Target Audience</label>
+                        <input type="text" name="audience" required placeholder="e.g., New startup founders aged 25-45"
+                            class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Tone</label>
+                        <select name="tone" required
+                            class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm text-slate-600">
+                            <option value="">Select a tone...</option>
+                            <option value="professional">Professional</option>
+                            <option value="friendly">Friendly</option>
+                            <option value="casual">Casual</option>
+                            <option value="urgent">Urgent</option>
+                            <option value="inspirational">Inspirational</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Template Type</label>
+                        <select name="templateType"
+                            class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm text-slate-600">
+                            <option value="html">HTML</option>
+                            <option value="text">Text</option>
+                        </select>
+                    </div>
+
+                    <div id="ai-modal-error" class="hidden p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl font-medium"></div>
+                </form>
+            </div>
+
+            <div class="bg-slate-50 px-8 py-6 flex flex-row-reverse gap-3">
+                <button onclick="submitCreateForm()" id="submit-btn"
+                    class="inline-flex justify-center px-6 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md active:scale-95">
+                    Create Template
+                </button>
+                <button onclick="toggleModal('create-template-modal')"
+                    class="inline-flex justify-center px-6 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-xl hover:bg-slate-50 transition-all">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.classList.toggle('hidden');
+    }
+
+    function clearFilters() {
+        document.getElementById('workspace-filter').value = '';
+        document.getElementById('type-filter').value = '';
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const workspaceId = document.getElementById('workspace-filter').value;
+        const type = document.getElementById('type-filter').value;
+        const rows = document.querySelectorAll('.template-row');
+        let visible = 0;
+
+        rows.forEach(row => {
+            let show = true;
+            if (workspaceId && row.dataset.workspaceId !== workspaceId) show = false;
+            if (type && row.dataset.type !== type) show = false;
+            row.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+
+        document.getElementById('filtered-count').textContent = visible;
+    }
+
+    function editTemplate(id) {
+        window.location.href = `/templates/${id}`;
+    }
+
+    document.getElementById('workspace-filter').addEventListener('change', applyFilters);
+    document.getElementById('type-filter').addEventListener('change', applyFilters);
+
+    let currentMode = 'manual';
+
+    function switchCreateMode(mode) {
+        currentMode = mode;
+        const manualForm = document.getElementById('create-template-form');
+        const aiForm = document.getElementById('create-ai-template-form');
+        const tabManual = document.getElementById('tab-manual');
+        const tabAi = document.getElementById('tab-ai');
+
+        if (mode === 'manual') {
+            manualForm.style.display = 'block';
+            aiForm.style.display = 'none';
+            tabManual.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+            tabManual.classList.remove('text-slate-500', 'hover:text-slate-700');
+            tabAi.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+            tabAi.classList.add('text-slate-500', 'hover:text-slate-700');
+        } else {
+            manualForm.style.display = 'none';
+            aiForm.style.display = 'block';
+            tabAi.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+            tabAi.classList.remove('text-slate-500', 'hover:text-slate-700');
+            tabManual.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+            tabManual.classList.add('text-slate-500', 'hover:text-slate-700');
+        }
+    }
+
+    async function submitCreateForm() {
+        if (currentMode === 'manual') {
+            await submitManualForm();
+        } else {
+            await submitAiForm();
+        }
+    }
+
+    async function submitManualForm() {
+        const form = document.getElementById('create-template-form');
+        const errorDiv = document.getElementById('modal-error');
+        const submitBtn = document.getElementById('submit-btn');
+
+        errorDiv.classList.add('hidden');
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Creating...';
+
+        const data = Object.fromEntries(new FormData(form));
+
+        try {
+            const res = await fetch('/api/templates', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...data,
+                    workspaceId: Number(data.workspaceId)
+                })
+            });
+
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                const result = await res.json();
+                errorDiv.innerText = result.error?.message || 'Failed to create template';
+                errorDiv.classList.remove('hidden');
+            }
+        } catch (err) {
+            errorDiv.innerText = 'A network error occurred';
+            errorDiv.classList.remove('hidden');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Create Template';
+        }
+    }
+
+    async function submitAiForm() {
+        const form = document.getElementById('create-ai-template-form');
+        const errorDiv = document.getElementById('ai-modal-error');
+        const submitBtn = document.getElementById('submit-btn');
+
+        errorDiv.classList.add('hidden');
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Generating...';
+
+        const data = Object.fromEntries(new FormData(form));
+
+        try {
+            const res = await fetch('/api/templates/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: data.name,
+                    workspaceId: Number(data.workspaceId),
+                    templateType: data.templateType || 'html',
+                    goal: data.goal,
+                    audience: data.audience,
+                    tone: data.tone,
+                    mustHaves: []
+                })
+            });
+
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                const result = await res.json();
+                errorDiv.innerText = result.error?.message || 'Failed to generate template';
+                errorDiv.classList.remove('hidden');
+            }
+        } catch (err) {
+            errorDiv.innerText = 'A network error occurred';
+            errorDiv.classList.remove('hidden');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Generate Template';
+        }
+    }
+
+    async function deleteTemplate(id, name) {
+        if (!confirm(`Delete template "${name}"?`)) return;
+
+        try {
+            const res = await fetch(`/api/templates/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                alert('Failed to delete template');
+            }
+        } catch (err) {
+            alert('Error deleting template');
+        }
+    }
+</script>

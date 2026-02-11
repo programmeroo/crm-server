@@ -5,7 +5,8 @@
       "Edit",
       "Write",
       "Glob",
-      "Grep"
+      "Grep",
+      "Read(//wsl$/Ubuntu/home/andy/crm-server//**)"
     ]
   }
 }

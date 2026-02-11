@@ -9,7 +9,12 @@ import { requireLogin } from '../middlewares/requireLogin';
 const createListSchema = Joi.object({
   workspaceId: Joi.number().integer().required(),
   name: Joi.string().trim().min(1).required(),
-  isPrimary: Joi.boolean().optional(),
+});
+
+const setPrimarySchema = Joi.object({
+  contactId: Joi.number().integer().required(),
+  listId: Joi.number().integer().required(),
+  workspaceId: Joi.number().integer().required(),
 });
 
 const assignSchema = Joi.object({
@@ -27,6 +32,8 @@ export class ListController {
   ) {
     this.router = Router();
     this.router.use(requireLogin);
+    // More specific routes must come BEFORE less specific ones
+    this.router.post('/assign/set-primary', this.setPrimary.bind(this));
     this.router.post('/assign', this.assign.bind(this));
     this.router.delete('/assign', this.removeAssignment.bind(this));
     this.router.post('/', this.create.bind(this));
@@ -53,11 +60,7 @@ export class ListController {
       const userId = (req.session as any).userId!;
       await this.verifyWorkspaceAccess(value.workspaceId, userId);
 
-      const list = await this.listService.createList(
-        value.workspaceId,
-        value.name,
-        value.isPrimary || false,
-      );
+      const list = await this.listService.createList(value.workspaceId, value.name);
       res.status(201).json({ data: list, error: null });
     } catch (err) {
       next(err);
@@ -88,6 +91,22 @@ export class ListController {
 
       await this.listService.removeAssignment(value.contactId, value.listId);
       res.json({ data: { message: 'Assignment removed' }, error: null });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  private async setPrimary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { error, value } = setPrimarySchema.validate(req.body);
+      if (error) {
+        throw new AppError('VALIDATION_ERROR', error.details[0].message, 400);
+      }
+
+      const userId = (req.session as any).userId!;
+      await this.verifyWorkspaceAccess(value.workspaceId, userId);
+      await this.listService.setAssignmentAsPrimary(value.contactId, value.listId, value.workspaceId);
+      res.json({ data: { message: 'Primary assignment updated' }, error: null });
     } catch (err) {
       next(err);
     }

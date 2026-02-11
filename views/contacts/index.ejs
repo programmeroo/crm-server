@@ -62,7 +62,7 @@
                 class="bg-slate-50 border border-slate-200 text-slate-600 text-sm rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">All Lists</option>
                 <% allLists.forEach(list => { %>
-                    <option value="<%= list.id %>"><%= list.name %></option>
+                    <option value="<%= list.id %>" data-workspace-id="<%= list.workspace_id %>"><%= list.name %></option>
                 <% }) %>
             </select>
 
@@ -160,7 +160,7 @@
                         <tr class="hover:bg-slate-50/50 transition-colors contact-row"
                             data-contact-id="<%= contact.id %>"
                             data-workspace-id="<%= contact.workspace_id || '' %>"
-                            data-list-id="<%= contact.primaryList ? contact.primaryList.id : '' %>"
+                            data-list-ids="<%= contact.lists.map(l => l.id).join(',') %>"
                             data-search="<%= (contact.first_name + ' ' + contact.last_name + ' ' + (contact.primary_email || '') + ' ' + (contact.primary_phone || '') + ' ' + (contact.company || '')).toLowerCase() %>">
                             <td class="px-4 py-4 text-center">
                                 <input type="checkbox" class="contact-checkbox rounded text-blue-600 focus:ring-blue-500 border-slate-300"
@@ -395,6 +395,26 @@
     const workspaceFilter = document.getElementById('workspace-filter');
     const listFilter = document.getElementById('list-filter');
 
+    function updateListDropdown() {
+        const selectedWorkspaceId = workspaceFilter.value;
+
+        // Get all lists and group by workspace
+        const allListOptions = Array.from(document.querySelectorAll('#list-filter option')).slice(1); // Skip "All Lists"
+        allListOptions.forEach(option => {
+            const workspaceId = option.dataset.workspaceId;
+            if (!selectedWorkspaceId) {
+                option.style.display = '';
+            } else {
+                option.style.display = workspaceId === selectedWorkspaceId ? '' : 'none';
+            }
+        });
+
+        // If current selection is hidden, reset to "All Lists"
+        if (listFilter.value && Array.from(listFilter.options).find(o => o.value === listFilter.value)?.style.display === 'none') {
+            listFilter.value = '';
+        }
+    }
+
     function applyFilters() {
         const searchTerm = searchInput.value.toLowerCase();
         const workspaceId = workspaceFilter.value;
@@ -406,7 +426,7 @@
         rows.forEach(row => {
             const searchData = row.dataset.search;
             const rowWorkspaceId = row.dataset.workspaceId;
-            const rowListId = row.dataset.listId;
+            const rowListIds = row.dataset.listIds ? row.dataset.listIds.split(',').filter(id => id) : [];
 
             let show = true;
 
@@ -418,7 +438,7 @@
                 show = false;
             }
 
-            if (listId && rowListId !== listId) {
+            if (listId && !rowListIds.includes(listId)) {
                 show = false;
             }
 
@@ -431,13 +451,17 @@
     }
 
     searchInput.addEventListener('input', applyFilters);
-    workspaceFilter.addEventListener('change', applyFilters);
+    workspaceFilter.addEventListener('change', () => {
+        updateListDropdown();
+        applyFilters();
+    });
     listFilter.addEventListener('change', applyFilters);
 
     function clearFilters() {
         searchInput.value = '';
         workspaceFilter.value = '';
         listFilter.value = '';
+        updateListDropdown();
         applyFilters();
     }
 

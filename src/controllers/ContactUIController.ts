@@ -25,15 +25,15 @@ export class ContactUIController {
         const contacts = await this.contactService.findByUser(userId);
         const workspaces = await this.workspaceService.listByUser(userId);
 
-        // Get all lists for each contact
+        // Get all lists for each contact and identify primary
         const contactsWithLists = await Promise.all(
             contacts.map(async (contact) => {
                 const lists = await this.listService.getListsForContact(contact.id);
-                const primaryList = lists.find(list => list.is_primary === 1);
+                const primaryList = lists.find(list => list.is_primary === 1) || null;
                 return {
                     ...contact,
                     lists,
-                    primaryList: primaryList || null
+                    primaryList
                 };
             })
         );

@@ -16,7 +16,7 @@ export class ListService {
     this.contactRepo = this.dataSource.getRepository(BaseContact);
   }
 
-  async createList(workspaceId: number, name: string, isPrimary: boolean = false): Promise<ContactList> {
+  async createList(workspaceId: number, name: string): Promise<ContactList> {
     const existing = await this.listRepo.findOne({
       where: { workspace_id: workspaceId, name },
     });
@@ -27,7 +27,6 @@ export class ListService {
     const list = this.listRepo.create({
       workspace_id: workspaceId,
       name,
-      is_primary: isPrimary ? 1 : 0,
     });
 
     const saved = await this.listRepo.save(list);
@@ -46,7 +45,7 @@ export class ListService {
     });
   }
 
-  async assignToContact(contactId: number, listId: number, userId: number): Promise<ContactListAssignment> {
+  async assignToContact(contactId: number, listId: number, userId: number, makePrimary: boolean = false): Promise<ContactListAssignment> {
     const list = await this.listRepo.findOne({ where: { id: listId } });
     if (!list) {
       throw new AppError('NOT_FOUND', 'List not found', 404);
@@ -72,25 +71,29 @@ export class ListService {
       throw new AppError('DUPLICATE', 'Contact is already assigned to this list', 409);
     }
 
-    // Enforce one primary list per contact
-    if (list.is_primary === 1) {
-      const primaryLists = await this.listRepo.find({
-        where: { workspace_id: list.workspace_id, is_primary: 1 },
-      });
-      const primaryListIds = primaryLists.map(l => l.id);
+    // Determine if this should be marked primary
+    const existingAssignments = await this.assignmentRepo.find({
+      where: { contact_id: contactId },
+    });
 
-      for (const primaryListId of primaryListIds) {
-        if (primaryListId === listId) continue;
-        const existing = await this.assignmentRepo.findOne({
-          where: { contact_id: contactId, list_id: primaryListId },
-        });
-        if (existing) {
-          await this.assignmentRepo.remove(existing);
-          logger.info('Removed contact from primary list', {
-            contactId,
-            oldListId: primaryListId,
-            newListId: listId,
-          });
+    // Get assignments in the same workspace
+    const existingWorkspaceAssignments = await this.assignmentRepo
+      .createQueryBuilder('a')
+      .innerJoinAndSelect(ContactList, 'l', 'a.list_id = l.id')
+      .where('a.contact_id = :contactId', { contactId })
+      .andWhere('l.workspace_id = :workspaceId', { workspaceId: list.workspace_id })
+      .getMany();
+
+    const hasPrimaryInWorkspace = existingWorkspaceAssignments.some(a => a.is_primary === 1);
+    let isPrimary = makePrimary || !hasPrimaryInWorkspace;
+
+    // If making this primary, unmark any other primary in this workspace
+    if (isPrimary && hasPrimaryInWorkspace) {
+      for (const assignment of existingWorkspaceAssignments) {
+        if (assignment.is_primary === 1) {
+          assignment.is_primary = 0;
+          await this.assignmentRepo.save(assignment);
+          logger.info('Unmarked previous primary assignment', { contactId, oldListId: assignment.list_id });
         }
       }
     }
@@ -98,10 +101,11 @@ export class ListService {
     const assignment = this.assignmentRepo.create({
       contact_id: contactId,
       list_id: listId,
+      is_primary: isPrimary ? 1 : 0,
     });
 
     const saved = await this.assignmentRepo.save(assignment);
-    logger.info('Contact assigned to list', { contactId, listId });
+    logger.info('Contact assigned to list', { contactId, listId, isPrimary });
     return saved;
   }
 
@@ -117,7 +121,7 @@ export class ListService {
     logger.info('Assignment removed', { contactId, listId });
   }
 
-  async getListsForContact(contactId: number): Promise<ContactList[]> {
+  async getListsForContact(contactId: number): Promise<(ContactList & { is_primary: number })[]> {
     const assignments = await this.assignmentRepo.find({
       where: { contact_id: contactId },
     });
@@ -125,9 +129,65 @@ export class ListService {
     if (assignments.length === 0) return [];
 
     const listIds = assignments.map(a => a.list_id);
-    return this.listRepo.find({
+    const lists = await this.listRepo.find({
       where: { id: In(listIds) },
     });
+
+    // Merge primary status from assignments
+    return lists.map(list => {
+      const assignment = assignments.find(a => a.list_id === list.id);
+      return {
+        ...list,
+        is_primary: assignment?.is_primary || 0,
+      };
+    });
+  }
+
+  async getPrimaryListForContact(contactId: number, workspaceId: number): Promise<ContactList | null> {
+    const assignment = await this.assignmentRepo
+      .createQueryBuilder('a')
+      .innerJoinAndSelect(ContactList, 'l', 'a.list_id = l.id')
+      .where('a.contact_id = :contactId', { contactId })
+      .andWhere('l.workspace_id = :workspaceId', { workspaceId })
+      .andWhere('a.is_primary = 1')
+      .getOne();
+
+    return assignment ? assignment.list : null;
+  }
+
+  async setAssignmentAsPrimary(contactId: number, listId: number, workspaceId: number): Promise<void> {
+    const assignment = await this.assignmentRepo.findOne({
+      where: { contact_id: contactId, list_id: listId },
+    });
+
+    if (!assignment) {
+      throw new AppError('NOT_FOUND', 'Assignment not found', 404);
+    }
+
+    // Get the workspace id for this list to check workspace consistency
+    const list = await this.listRepo.findOne({ where: { id: listId } });
+    if (!list || list.workspace_id !== workspaceId) {
+      throw new AppError('FORBIDDEN', 'List does not belong to this workspace', 403);
+    }
+
+    // Unmark any other primary assignments in this workspace
+    const existingPrimary = await this.assignmentRepo
+      .createQueryBuilder('a')
+      .innerJoinAndSelect(ContactList, 'l', 'a.list_id = l.id')
+      .where('a.contact_id = :contactId', { contactId })
+      .andWhere('l.workspace_id = :workspaceId', { workspaceId })
+      .andWhere('a.is_primary = 1')
+      .getMany();
+
+    for (const existing of existingPrimary) {
+      existing.is_primary = 0;
+      await this.assignmentRepo.save(existing);
+    }
+
+    // Mark this assignment as primary
+    assignment.is_primary = 1;
+    await this.assignmentRepo.save(assignment);
+    logger.info('Assignment set as primary', { contactId, listId });
   }
 
   async deleteList(id: number, workspaceId: number): Promise<void> {
