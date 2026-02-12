@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PromptFileService } from '../services/PromptFileService';
 import { WorkspaceService } from '../services/WorkspaceService';
 import { ListService } from '../services/ListService';
+import { SystemSettingsService } from '../services/SystemSettingsService';
 import { requireLogin } from '../middlewares/requireLogin';
 import { AppError } from '../errors/AppError';
 
@@ -11,7 +12,8 @@ export class SettingsUIController {
   constructor(
     private promptFileService: PromptFileService,
     private workspaceService: WorkspaceService,
-    private listService: ListService
+    private listService: ListService,
+    private systemSettingsService: SystemSettingsService
   ) {
     this.router = Router();
     this.router.use(requireLogin);
@@ -58,6 +60,10 @@ export class SettingsUIController {
         promptsByWorkspace[ws.id] = allPromptsWithDetails.filter(p => p.workspaceId === ws.id);
       });
 
+      // Get user settings (e.g., Twilio config)
+      const userSettings = await this.systemSettingsService.getUserSettings(userId);
+      const twilioConfig = userSettings.twilio_config || null;
+
       res.render('settings/index', {
         title: 'Settings',
         activePage: 'settings',
@@ -65,6 +71,8 @@ export class SettingsUIController {
         prompts: allPromptsWithDetails,
         promptsByWorkspace,
         workspaceLists,
+        userSettings,
+        twilioConfig,
       });
     } catch (err) {
       console.error('Error loading settings:', err);

@@ -6,7 +6,8 @@
       "Write",
       "Glob",
       "Grep",
-      "Read(//wsl$/Ubuntu/home/andy/crm-server//**)"
+      "Read(//wsl$/Ubuntu/home/andy/crm-server//**)",
+      "Bash(npm run build:*)"
     ]
   }
 }

@@ -3,6 +3,8 @@ import { ContactService } from '../services/ContactService';
 import { WorkspaceService } from '../services/WorkspaceService';
 import { CustomFieldService } from '../services/CustomFieldService';
 import { ListService } from '../services/ListService';
+import { CommunicationLogService } from '../services/CommunicationLogService';
+import { TodoService } from '../services/TodoService';
 import { requireLogin } from '../middlewares/requireLogin';
 
 export class ContactUIController {
@@ -12,7 +14,9 @@ export class ContactUIController {
         private contactService: ContactService,
         private workspaceService: WorkspaceService,
         private customFieldService: CustomFieldService,
-        private listService: ListService
+        private listService: ListService,
+        private communicationLogService: CommunicationLogService,
+        private todoService: TodoService
     ) {
         this.router = Router();
         this.router.use(requireLogin);
@@ -78,6 +82,26 @@ export class ContactUIController {
             ? await this.listService.getListsByWorkspace(contact.workspace_id)
             : [];
 
+        // Get communication logs
+        let communicationLogs: any[] = [];
+        try {
+            const logs = await this.communicationLogService.findByContact(contactId, userId);
+            communicationLogs = logs.map(log => ({
+                ...log,
+                content: JSON.parse(log.content),
+            }));
+        } catch (err) {
+            // Continue without logs if error
+        }
+
+        // Get todos for this contact
+        let todos: any[] = [];
+        try {
+            todos = await this.todoService.findByContact(contactId, userId);
+        } catch (err) {
+            // Continue without todos if error
+        }
+
         res.render('contacts/detail', {
             title: `${contact.first_name} ${contact.last_name}`,
             pageTitle: 'Contact Detail',
@@ -86,7 +110,9 @@ export class ContactUIController {
             customFieldDefinitions,
             customFieldValues,
             contactLists,
-            availableLists
+            availableLists,
+            communicationLogs,
+            todos
         });
     }
 }

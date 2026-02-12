@@ -156,8 +156,14 @@ export class TemplateService {
         messages: [
           {
             role: 'system',
-            content: `You are an expert email marketing copywriter. Generate email templates in JSON format with fields: subject, body, preheader (optional), signature (optional).
-${templateType === 'html' ? 'Return HTML content for the body field.' : 'Return plain text content for the body field.'}`,
+            content: `You are an expert email marketing copywriter. Generate email templates in valid JSON format ONLY.
+Return ONLY a JSON object (no markdown, no explanation) with these fields:
+- subject: string (email subject line, 50-70 characters)
+- body: string (${templateType === 'html' ? 'HTML with semantic markup' : 'plain text'})
+- preheader: string or null (preview text, 80-100 characters, optional)
+- signature: string or null (email signature, optional)
+
+Do not include any text outside the JSON object.`,
           },
           {
             role: 'user',
@@ -165,7 +171,6 @@ ${templateType === 'html' ? 'Return HTML content for the body field.' : 'Return 
           },
         ],
         temperature: 0.7,
-        response_format: { type: 'json_object' },
       });
 
       const response = completion.choices[0].message.content;

@@ -2,6 +2,7 @@ import { Request, Response, Router } from 'express';
 import { WorkspaceService } from '../services/WorkspaceService';
 import { ContactService } from '../services/ContactService';
 import { CampaignService } from '../services/CampaignService';
+import { TodoService } from '../services/TodoService';
 
 export class DashboardController {
     public router: Router;
@@ -9,7 +10,8 @@ export class DashboardController {
     constructor(
         private workspaceService: WorkspaceService,
         private contactService: ContactService,
-        private campaignService: CampaignService
+        private campaignService: CampaignService,
+        private todoService: TodoService
     ) {
         this.router = Router();
         this.router.get('/', this.getDashboard.bind(this));
@@ -78,11 +80,24 @@ export class DashboardController {
             { id: 3, firstName: 'Michael', lastName: 'Brown', email: 'm@brown.com', workspace: null, stage: 'Unassigned', lastContact: '5 hours ago' },
         ];
 
-        const todos = [
-            { id: 1, title: 'Follow up Mike Johnson', description: 'due today', dueDate: 'today' },
-            { id: 2, title: 'Review AI suggestion', description: 'Template optimization', dueDate: null },
-            { id: 3, title: 'Birthday - Lisa Chen', description: 'tomorrow', dueDate: 'tomorrow' },
-        ];
+        // Fetch real todos for user
+        let todos: any[] = [];
+        try {
+            const realTodos = await this.todoService.findByUser(userId, { isComplete: false });
+            todos = realTodos.map(todo => ({
+                id: todo.id,
+                title: todo.text,
+                description: todo.contact_id ? `Contact: ${todo.contact_id}` : 'General',
+                dueDate: todo.due_date ? this.formatDueDate(new Date(todo.due_date)) : null,
+            }));
+        } catch (err) {
+            // Fall back to mock data if error
+            todos = [
+                { id: 1, title: 'Follow up Mike Johnson', description: 'due today', dueDate: 'today' },
+                { id: 2, title: 'Review AI suggestion', description: 'Template optimization', dueDate: null },
+                { id: 3, title: 'Birthday - Lisa Chen', description: 'tomorrow', dueDate: 'tomorrow' },
+            ];
+        }
 
         const hotLeads = [
             { id: 1, name: 'John Doe', list: 'Prospects', tag: 'Hot Leads', lastContact: '2 days ago', initials: 'JD' },
@@ -129,5 +144,26 @@ export class DashboardController {
             hotLeads,
             campaigns
         });
+    }
+
+    private formatDueDate(date: Date): string {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const dueDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+        if (dueDate.getTime() === today.getTime()) {
+            return 'today';
+        } else if (dueDate.getTime() === tomorrow.getTime()) {
+            return 'tomorrow';
+        } else if (dueDate < today) {
+            const diffDays = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+            return `${diffDays} days ago`;
+        } else {
+            const diffDays = Math.floor((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            return `in ${diffDays} days`;
+        }
     }
 }

@@ -241,6 +241,15 @@
                     </div>
 
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Use Existing Prompt (Optional)</label>
+                        <select id="prompt-selector" onchange="populateFromPrompt()"
+                            class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm text-slate-600">
+                            <option value="">-- Select a prompt to auto-fill --</option>
+                        </select>
+                        <p class="text-xs text-slate-500 mt-1">Selecting a prompt will auto-fill the goal, audience, and tone fields below</p>
+                    </div>
+
+                    <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Goal</label>
                         <input type="text" name="goal" required placeholder="e.g., Welcome new customers and encourage sign-up"
                             class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm">
@@ -293,166 +302,241 @@
 </div>
 
 <script>
+    // Prompts data passed from server
+    var promptsByWorkspace = <%- JSON.stringify(promptsByWorkspace || {}) %>;
+    var currentMode = 'manual';
+
+    // Basic functions
     function toggleModal(id) {
-        const modal = document.getElementById(id);
+        var modal = document.getElementById(id);
         if (modal) modal.classList.toggle('hidden');
     }
 
+    function editTemplate(id) {
+        window.location.href = '/templates/' + id;
+    }
+
+    function deleteTemplate(id, name) {
+        if (confirm('Delete template "' + name + '"?')) {
+            fetch('/api/templates/' + id, { method: 'DELETE' })
+                .then(function(res) {
+                    if (res.ok) window.location.reload();
+                    else alert('Failed to delete template');
+                })
+                .catch(function(err) { alert('Error deleting template'); });
+        }
+    }
+
     function clearFilters() {
-        document.getElementById('workspace-filter').value = '';
-        document.getElementById('type-filter').value = '';
+        var ws = document.getElementById('workspace-filter');
+        var type = document.getElementById('type-filter');
+        if (ws) ws.value = '';
+        if (type) type.value = '';
         applyFilters();
     }
 
     function applyFilters() {
-        const workspaceId = document.getElementById('workspace-filter').value;
-        const type = document.getElementById('type-filter').value;
-        const rows = document.querySelectorAll('.template-row');
-        let visible = 0;
+        var ws = document.getElementById('workspace-filter');
+        var type = document.getElementById('type-filter');
+        if (!ws || !type) return;
 
-        rows.forEach(row => {
-            let show = true;
+        var workspaceId = ws.value;
+        var typeVal = type.value;
+        var rows = document.querySelectorAll('.template-row');
+        var visible = 0;
+
+        rows.forEach(function(row) {
+            var show = true;
             if (workspaceId && row.dataset.workspaceId !== workspaceId) show = false;
-            if (type && row.dataset.type !== type) show = false;
+            if (typeVal && row.dataset.type !== typeVal) show = false;
             row.style.display = show ? '' : 'none';
             if (show) visible++;
         });
 
-        document.getElementById('filtered-count').textContent = visible;
+        var countEl = document.getElementById('filtered-count');
+        if (countEl) countEl.textContent = visible;
     }
-
-    function editTemplate(id) {
-        window.location.href = `/templates/${id}`;
-    }
-
-    document.getElementById('workspace-filter').addEventListener('change', applyFilters);
-    document.getElementById('type-filter').addEventListener('change', applyFilters);
-
-    let currentMode = 'manual';
 
     function switchCreateMode(mode) {
         currentMode = mode;
-        const manualForm = document.getElementById('create-template-form');
-        const aiForm = document.getElementById('create-ai-template-form');
-        const tabManual = document.getElementById('tab-manual');
-        const tabAi = document.getElementById('tab-ai');
+        var manualForm = document.getElementById('create-template-form');
+        var aiForm = document.getElementById('create-ai-template-form');
+        var tabManual = document.getElementById('tab-manual');
+        var tabAi = document.getElementById('tab-ai');
 
         if (mode === 'manual') {
             manualForm.style.display = 'block';
             aiForm.style.display = 'none';
-            tabManual.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
-            tabManual.classList.remove('text-slate-500', 'hover:text-slate-700');
-            tabAi.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
-            tabAi.classList.add('text-slate-500', 'hover:text-slate-700');
+            tabManual.className = 'pb-3 px-1 text-sm font-semibold text-blue-600 border-b-2 border-blue-600';
+            tabAi.className = 'pb-3 px-1 text-sm font-medium text-slate-500 hover:text-slate-700';
         } else {
             manualForm.style.display = 'none';
             aiForm.style.display = 'block';
-            tabAi.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
-            tabAi.classList.remove('text-slate-500', 'hover:text-slate-700');
-            tabManual.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
-            tabManual.classList.add('text-slate-500', 'hover:text-slate-700');
+            tabAi.className = 'pb-3 px-1 text-sm font-semibold text-blue-600 border-b-2 border-blue-600';
+            tabManual.className = 'pb-3 px-1 text-sm font-medium text-slate-500 hover:text-slate-700';
+            updatePromptSelector();
         }
     }
 
-    async function submitCreateForm() {
+    function updatePromptSelector() {
+        var workspaceSelect = document.querySelector('#create-ai-template-form [name="workspaceId"]');
+        var promptSelector = document.getElementById('prompt-selector');
+        if (!workspaceSelect || !promptSelector) return;
+
+        var workspaceId = parseInt(workspaceSelect.value);
+        promptSelector.innerHTML = '<option value="">-- Select a prompt to auto-fill --</option>';
+
+        if (workspaceId && promptsByWorkspace[workspaceId]) {
+            var prompts = promptsByWorkspace[workspaceId];
+            prompts.forEach(function(prompt) {
+                var option = document.createElement('option');
+                option.value = prompt.filename;
+                option.textContent = prompt.name;
+                option.dataset.goal = (prompt.content && prompt.content.goal) ? prompt.content.goal : (prompt.content || '');
+                option.dataset.audience = (prompt.content && prompt.content.audience) ? prompt.content.audience : '';
+                option.dataset.tone = (prompt.content && prompt.content.tone) ? prompt.content.tone : '';
+                promptSelector.appendChild(option);
+            });
+        }
+    }
+
+    function populateFromPrompt() {
+        var promptSelector = document.getElementById('prompt-selector');
+        var selectedOption = promptSelector.options[promptSelector.selectedIndex];
+        if (!selectedOption.value) return;
+
+        var goalField = document.querySelector('#create-ai-template-form [name="goal"]');
+        var audienceField = document.querySelector('#create-ai-template-form [name="audience"]');
+        var toneField = document.querySelector('#create-ai-template-form [name="tone"]');
+
+        if (selectedOption.dataset.goal) goalField.value = selectedOption.dataset.goal;
+        if (selectedOption.dataset.audience) audienceField.value = selectedOption.dataset.audience;
+        if (selectedOption.dataset.tone) toneField.value = selectedOption.dataset.tone;
+    }
+
+    function submitCreateForm() {
         if (currentMode === 'manual') {
-            await submitManualForm();
+            submitManualForm();
         } else {
-            await submitAiForm();
+            submitAiForm();
         }
     }
 
-    async function submitManualForm() {
-        const form = document.getElementById('create-template-form');
-        const errorDiv = document.getElementById('modal-error');
-        const submitBtn = document.getElementById('submit-btn');
+    function submitManualForm() {
+        var form = document.getElementById('create-template-form');
+        var errorDiv = document.getElementById('modal-error');
+        var submitBtn = document.getElementById('submit-btn');
 
         errorDiv.classList.add('hidden');
         submitBtn.disabled = true;
         submitBtn.innerText = 'Creating...';
 
-        const data = Object.fromEntries(new FormData(form));
+        var formData = new FormData(form);
+        var data = Object.fromEntries(formData);
 
-        try {
-            const res = await fetch('/api/templates', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...data,
-                    workspaceId: Number(data.workspaceId)
-                })
-            });
-
-            if (res.ok) {
-                window.location.reload();
-            } else {
-                const result = await res.json();
-                errorDiv.innerText = result.error?.message || 'Failed to create template';
-                errorDiv.classList.remove('hidden');
-            }
-        } catch (err) {
-            errorDiv.innerText = 'A network error occurred';
+        if (!data.workspaceId || !data.name || !data.body) {
+            errorDiv.innerText = '❌ Please fill all required fields';
             errorDiv.classList.remove('hidden');
-        } finally {
             submitBtn.disabled = false;
             submitBtn.innerText = 'Create Template';
+            return;
         }
+
+        var payload = {
+            name: data.name,
+            workspaceId: Number(data.workspaceId),
+            template_type: data.template_type,
+            subject: data.subject,
+            body: data.body,
+            preheader: data.preheader,
+            signature: data.signature
+        };
+
+        fetch('/api/templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(function(res) {
+            return res.json().then(function(result) {
+                if (res.ok) {
+                    window.location.reload();
+                } else {
+                    var errorMsg = (result.error && result.error.message) ? result.error.message : 'Failed to create template';
+                    errorDiv.innerText = '❌ ' + errorMsg;
+                    errorDiv.classList.remove('hidden');
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Create Template';
+                }
+            });
+        }).catch(function(err) {
+            errorDiv.innerText = '❌ Network error: ' + err.message;
+            errorDiv.classList.remove('hidden');
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Create Template';
+        });
     }
 
-    async function submitAiForm() {
-        const form = document.getElementById('create-ai-template-form');
-        const errorDiv = document.getElementById('ai-modal-error');
-        const submitBtn = document.getElementById('submit-btn');
+    function submitAiForm() {
+        var form = document.getElementById('create-ai-template-form');
+        var errorDiv = document.getElementById('ai-modal-error');
+        var submitBtn = document.getElementById('submit-btn');
 
         errorDiv.classList.add('hidden');
         submitBtn.disabled = true;
         submitBtn.innerText = 'Generating...';
 
-        const data = Object.fromEntries(new FormData(form));
+        var data = Object.fromEntries(new FormData(form));
 
-        try {
-            const res = await fetch('/api/templates/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: data.name,
-                    workspaceId: Number(data.workspaceId),
-                    templateType: data.templateType || 'html',
-                    goal: data.goal,
-                    audience: data.audience,
-                    tone: data.tone,
-                    mustHaves: []
-                })
-            });
-
+        fetch('/api/templates/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: data.name,
+                workspaceId: Number(data.workspaceId),
+                templateType: data.templateType || 'html',
+                goal: data.goal,
+                audience: data.audience,
+                tone: data.tone,
+                mustHaves: []
+            })
+        }).then(function(res) {
             if (res.ok) {
                 window.location.reload();
             } else {
-                const result = await res.json();
-                errorDiv.innerText = result.error?.message || 'Failed to generate template';
-                errorDiv.classList.remove('hidden');
+                return res.json().then(function(result) {
+                    var msg = (result.error && result.error.message) ? result.error.message : 'Failed to generate template';
+                    errorDiv.innerText = msg;
+                    errorDiv.classList.remove('hidden');
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Generate Template';
+                });
             }
-        } catch (err) {
-            errorDiv.innerText = 'A network error occurred';
+        }).catch(function(err) {
+            errorDiv.innerText = 'Network error occurred';
             errorDiv.classList.remove('hidden');
-        } finally {
             submitBtn.disabled = false;
             submitBtn.innerText = 'Generate Template';
-        }
+        });
     }
 
-    async function deleteTemplate(id, name) {
-        if (!confirm(`Delete template "${name}"?`)) return;
+    // Setup event listeners when page loads
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            var wsFilter = document.getElementById('workspace-filter');
+            var typeFilter = document.getElementById('type-filter');
+            var aiWorkspaceSelect = document.querySelector('#create-ai-template-form [name="workspaceId"]');
 
-        try {
-            const res = await fetch(`/api/templates/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                window.location.reload();
-            } else {
-                alert('Failed to delete template');
-            }
-        } catch (err) {
-            alert('Error deleting template');
-        }
+            if (wsFilter) wsFilter.addEventListener('change', applyFilters);
+            if (typeFilter) typeFilter.addEventListener('change', applyFilters);
+            if (aiWorkspaceSelect) aiWorkspaceSelect.addEventListener('change', updatePromptSelector);
+        });
+    } else {
+        var wsFilter = document.getElementById('workspace-filter');
+        var typeFilter = document.getElementById('type-filter');
+        var aiWorkspaceSelect = document.querySelector('#create-ai-template-form [name="workspaceId"]');
+
+        if (wsFilter) wsFilter.addEventListener('change', applyFilters);
+        if (typeFilter) typeFilter.addEventListener('change', applyFilters);
+        if (aiWorkspaceSelect) aiWorkspaceSelect.addEventListener('change', updatePromptSelector);
     }
 </script>

@@ -15,6 +15,9 @@ import { CustomFieldService } from './services/CustomFieldService';
 import { TemplateService } from './services/TemplateService';
 import { PromptFileService } from './services/PromptFileService';
 import { CampaignService } from './services/CampaignService';
+import { SystemSettingsService } from './services/SystemSettingsService';
+import { CommunicationLogService } from './services/CommunicationLogService';
+import { TodoService } from './services/TodoService';
 import { AuthController } from './controllers/AuthController';
 import { AuditController } from './controllers/AuditController';
 import { WorkspaceController } from './controllers/WorkspaceController';
@@ -30,6 +33,9 @@ import { WorkspaceUIController } from './controllers/WorkspaceUIController';
 import { TemplateUIController } from './controllers/TemplateUIController';
 import { CampaignController } from './controllers/CampaignController';
 import { CampaignUIController } from './controllers/CampaignUIController';
+import { SystemSettingsController } from './controllers/SystemSettingsController';
+import { CommunicationLogController } from './controllers/CommunicationLogController';
+import { TodoController } from './controllers/TodoController';
 import { createApiKeyAuth } from './middlewares/apiKeyAuth';
 import { createAuditMiddleware } from './middlewares/auditMiddleware';
 import expressLayouts from 'express-ejs-layouts';
@@ -97,6 +103,9 @@ export function createApp(dataSource: DataSource): express.Application {
   const templateService = new TemplateService(dataSource);
   const promptFileService = new PromptFileService();
   const campaignService = new CampaignService(dataSource);
+  const systemSettingsService = new SystemSettingsService(dataSource);
+  const communicationLogService = new CommunicationLogService(dataSource, systemSettingsService);
+  const todoService = new TodoService(dataSource);
 
   // Audit middleware (cross-cutting, before routes)
   app.use(createAuditMiddleware(auditService));
@@ -157,7 +166,7 @@ export function createApp(dataSource: DataSource): express.Application {
   app.use('/api/workspaces', workspaceController.router);
 
   // Dashboard (UI)
-  const dashboardController = new DashboardController(workspaceService, contactService, campaignService);
+  const dashboardController = new DashboardController(workspaceService, contactService, campaignService, todoService);
   app.use('/dashboard', dashboardController.router);
 
   // Redirect root to dashboard
@@ -180,16 +189,16 @@ export function createApp(dataSource: DataSource): express.Application {
   const workspaceUIController = new WorkspaceUIController(workspaceService, contactService, listService);
   app.use('/workspaces', workspaceUIController.router);
 
-  const contactUIController = new ContactUIController(contactService, workspaceService, customFieldService, listService);
+  const contactUIController = new ContactUIController(contactService, workspaceService, customFieldService, listService, communicationLogService, todoService);
   app.use('/contacts', contactUIController.router);
 
-  const templateUIController = new TemplateUIController(templateService, workspaceService);
+  const templateUIController = new TemplateUIController(templateService, workspaceService, promptFileService);
   app.use('/templates', templateUIController.router);
 
   const campaignUIController = new CampaignUIController(campaignService, workspaceService, templateService, listService);
   app.use('/campaigns', campaignUIController.router);
 
-  const settingsUIController = new SettingsUIController(promptFileService, workspaceService, listService);
+  const settingsUIController = new SettingsUIController(promptFileService, workspaceService, listService, systemSettingsService);
   app.use('/settings', settingsUIController.router);
 
   // API - Contacts
@@ -219,6 +228,18 @@ export function createApp(dataSource: DataSource): express.Application {
   // Audit logs
   const auditController = new AuditController(auditService);
   app.use('/api/audit-logs', auditController.router);
+
+  // System Settings
+  const systemSettingsController = new SystemSettingsController(systemSettingsService, workspaceService);
+  app.use('/api/settings', systemSettingsController.router);
+
+  // Communication Logs
+  const communicationLogController = new CommunicationLogController(communicationLogService, contactService, workspaceService, todoService);
+  app.use('/api/communication-logs', communicationLogController.router);
+
+  // Todos
+  const todoController = new TodoController(todoService, workspaceService, contactService);
+  app.use('/api/todos', todoController.router);
 
   // Error handler (must be last)
   app.use(errorHandler);

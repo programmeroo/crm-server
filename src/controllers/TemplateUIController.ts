@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { TemplateService } from '../services/TemplateService';
 import { WorkspaceService } from '../services/WorkspaceService';
+import { PromptFileService } from '../services/PromptFileService';
 import { requireLogin } from '../middlewares/requireLogin';
 
 export class TemplateUIController {
@@ -8,7 +9,8 @@ export class TemplateUIController {
 
   constructor(
     private templateService: TemplateService,
-    private workspaceService: WorkspaceService
+    private workspaceService: WorkspaceService,
+    private promptFileService: PromptFileService
   ) {
     this.router = Router();
     this.router.use(requireLogin);
@@ -23,16 +25,28 @@ export class TemplateUIController {
 
       // Get all templates across workspaces
       const allTemplates: any[] = [];
+      const promptsByWorkspace: { [key: number]: any[] } = {};
+
       for (const workspace of workspaces) {
         const templates = await this.templateService.listByWorkspace(workspace.id);
         allTemplates.push(...templates.map(t => ({ ...t, workspaceName: workspace.name })));
+
+        // Fetch prompts for this workspace
+        try {
+          const prompts = await this.promptFileService.listByWorkspace(workspace.id);
+          promptsByWorkspace[workspace.id] = prompts;
+        } catch (err) {
+          // Prompts directory might not exist yet, that's fine
+          promptsByWorkspace[workspace.id] = [];
+        }
       }
 
       res.render('templates/index', {
         title: 'Templates',
         activePage: 'templates',
         templates: allTemplates,
-        workspaces
+        workspaces,
+        promptsByWorkspace
       });
     } catch (err) {
       console.error('Error loading templates:', err);

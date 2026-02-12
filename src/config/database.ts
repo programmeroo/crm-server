@@ -9,7 +9,7 @@ function getDataSourceOptions(overrides?: Partial<DataSourceOptions>): DataSourc
     database: env.isTest ? ':memory:' : env.dbPath,
     entities: [path.join(__dirname, '..', '**', '*.entity.{ts,js}')],
     migrations: [path.join(__dirname, '..', 'migrations', '*.{ts,js}')],
-    synchronize: true, // Temporarily enabled to create custom fields tables
+    synchronize: false, // DISABLED - was causing data loss. Use migrations instead.
     logging: false,
   };
 

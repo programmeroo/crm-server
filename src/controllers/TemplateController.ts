@@ -64,6 +64,8 @@ export class TemplateController {
 
   private async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      console.log('[TemplateController] GET /api/templates', { query: req.query, userId: (req.session as any).userId });
+
       const workspaceId = parseInt(req.query.workspaceId as string, 10);
       if (isNaN(workspaceId)) {
         throw new AppError('VALIDATION_ERROR', 'workspaceId is required', 400);
@@ -73,18 +75,25 @@ export class TemplateController {
       await this.verifyWorkspaceAccess(workspaceId, userId);
 
       const templates = await this.templateService.listByWorkspace(workspaceId);
+      console.log('[TemplateController] Found templates:', templates.map(t => ({ id: t.id, name: t.name })));
       res.json({ data: templates, error: null });
     } catch (err) {
+      console.error('[TemplateController] Error listing templates:', err);
       next(err);
     }
   }
 
   private async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      console.log('[TemplateController] POST /api/templates received', { body: req.body, userId: (req.session as any).userId });
+
       const { error, value } = createSchema.validate(req.body);
       if (error) {
+        console.error('[TemplateController] Validation error:', error.details);
         throw new AppError('VALIDATION_ERROR', error.details[0].message, 400);
       }
+
+      console.log('[TemplateController] Validation passed, creating template:', { name: value.name, workspace: value.workspaceId });
 
       const userId = (req.session as any).userId!;
       await this.verifyWorkspaceAccess(value.workspaceId, userId);
@@ -98,8 +107,10 @@ export class TemplateController {
         signature: value.signature,
       });
 
+      console.log('[TemplateController] Template created successfully:', { id: template.id, name: template.name });
       res.status(201).json({ data: template, error: null });
     } catch (err) {
+      console.error('[TemplateController] Error creating template:', err);
       next(err);
     }
   }
