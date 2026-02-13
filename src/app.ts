@@ -18,6 +18,7 @@ import { CampaignService } from './services/CampaignService';
 import { SystemSettingsService } from './services/SystemSettingsService';
 import { CommunicationLogService } from './services/CommunicationLogService';
 import { TodoService } from './services/TodoService';
+import { AIInsightService } from './services/AIInsightService';
 import { AuthController } from './controllers/AuthController';
 import { AuditController } from './controllers/AuditController';
 import { WorkspaceController } from './controllers/WorkspaceController';
@@ -36,6 +37,8 @@ import { CampaignUIController } from './controllers/CampaignUIController';
 import { SystemSettingsController } from './controllers/SystemSettingsController';
 import { CommunicationLogController } from './controllers/CommunicationLogController';
 import { TodoController } from './controllers/TodoController';
+import { AIInsightController } from './controllers/AIInsightController';
+import { AIInsightUIController } from './controllers/AIInsightUIController';
 import { createApiKeyAuth } from './middlewares/apiKeyAuth';
 import { createAuditMiddleware } from './middlewares/auditMiddleware';
 import expressLayouts from 'express-ejs-layouts';
@@ -106,6 +109,16 @@ export function createApp(dataSource: DataSource): express.Application {
   const systemSettingsService = new SystemSettingsService(dataSource);
   const communicationLogService = new CommunicationLogService(dataSource, systemSettingsService);
   const todoService = new TodoService(dataSource);
+  const aiInsightService = new AIInsightService(
+    dataSource,
+    systemSettingsService,
+    contactService,
+    communicationLogService,
+    campaignService,
+    templateService,
+    todoService,
+    workspaceService,
+  );
 
   // Audit middleware (cross-cutting, before routes)
   app.use(createAuditMiddleware(auditService));
@@ -166,7 +179,7 @@ export function createApp(dataSource: DataSource): express.Application {
   app.use('/api/workspaces', workspaceController.router);
 
   // Dashboard (UI)
-  const dashboardController = new DashboardController(workspaceService, contactService, campaignService, todoService);
+  const dashboardController = new DashboardController(workspaceService, contactService, campaignService, todoService, aiInsightService);
   app.use('/dashboard', dashboardController.router);
 
   // Redirect root to dashboard
@@ -197,6 +210,9 @@ export function createApp(dataSource: DataSource): express.Application {
 
   const campaignUIController = new CampaignUIController(campaignService, workspaceService, templateService, listService);
   app.use('/campaigns', campaignUIController.router);
+
+  const aiInsightUIController = new AIInsightUIController(aiInsightService);
+  app.use('/ai-insights', aiInsightUIController.router);
 
   const settingsUIController = new SettingsUIController(promptFileService, workspaceService, listService, systemSettingsService);
   app.use('/settings', settingsUIController.router);
@@ -240,6 +256,10 @@ export function createApp(dataSource: DataSource): express.Application {
   // Todos
   const todoController = new TodoController(todoService, workspaceService, contactService);
   app.use('/api/todos', todoController.router);
+
+  // AI Insights
+  const aiInsightController = new AIInsightController(aiInsightService, workspaceService);
+  app.use('/api/ai-insights', aiInsightController.router);
 
   // Error handler (must be last)
   app.use(errorHandler);

@@ -3,6 +3,7 @@ import { WorkspaceService } from '../services/WorkspaceService';
 import { ContactService } from '../services/ContactService';
 import { CampaignService } from '../services/CampaignService';
 import { TodoService } from '../services/TodoService';
+import { AIInsightService } from '../services/AIInsightService';
 
 export class DashboardController {
     public router: Router;
@@ -11,7 +12,8 @@ export class DashboardController {
         private workspaceService: WorkspaceService,
         private contactService: ContactService,
         private campaignService: CampaignService,
-        private todoService: TodoService
+        private todoService: TodoService,
+        private aiInsightService: AIInsightService
     ) {
         this.router = Router();
         this.router.get('/', this.getDashboard.bind(this));
@@ -69,10 +71,25 @@ export class DashboardController {
             { title: 'Stalled Prospects', description: '8 prospects have had no contact in >60 days', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>' },
         ];
 
-        const insights = [
-            { type: 'Optimization', confidence: 85, content: 'Template "Welcome" has a 28% higher open rate when sent between 9 AM and 11 AM.' },
-            { type: 'Income Idea', confidence: 78, content: 'You have 27 Calendly bookings from "Realtor" contacts. Suggestion: Create a premium "Pre-Approval Checklist" course.' },
-        ];
+        // Fetch real insights from AIInsightService
+        let insights: any[] = [];
+        try {
+            const realInsights = await this.aiInsightService.findByUser(userId, {
+                dismissed: false,
+                limit: 2
+            });
+            insights = realInsights.map(insight => ({
+                type: insight.type,
+                confidence: Math.round(insight.confidence * 100),
+                content: insight.content
+            }));
+        } catch (err) {
+            // Fall back to mock data if error or no insights yet
+            insights = [
+                { type: 'Optimization', confidence: 85, content: 'Template "Welcome" has a 28% higher open rate when sent between 9 AM and 11 AM.' },
+                { type: 'Income Idea', confidence: 78, content: 'You have 27 Calendly bookings from "Realtor" contacts. Suggestion: Create a premium "Pre-Approval Checklist" course.' },
+            ];
+        }
 
         const recentContacts = [
             { id: 1, firstName: 'John', lastName: 'Doe', email: 'john@example.com', workspace: 'Loan Factory', stage: 'Prospect', lastContact: '2 days ago' },
