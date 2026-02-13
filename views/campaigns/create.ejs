@@ -60,7 +60,7 @@
           <select id="templateSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="">No template - I'll compose the email later</option>
           </select>
-          <p class="text-sm text-gray-500 mt-2">You can also create and manage templates in the <a href="/settings?tab=templates" class="text-blue-600 hover:underline">Settings</a></p>
+          <p class="text-sm text-gray-500 mt-2">You can also create and manage templates in <a href="/templates" class="text-blue-600 hover:underline">Templates</a></p>
         </div>
       </div>
 
@@ -190,7 +190,7 @@ function updateTemplateOptions(workspaceId) {
   <% workspaces.forEach(ws => { %>
     if ('<%= ws.id %>' === workspaceId) {
       <% ws.templates.forEach(template => { %>
-        const option = document.createElement('option');
+        let option = document.createElement('option');
         option.value = '<%= template.id %>';
         option.textContent = '<%= template.name %>';
         templateSelect.appendChild(option);
