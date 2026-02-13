@@ -20,22 +20,31 @@ export class AIInsightUIController {
   private async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = (req.session as any).userId;
+      console.log('[DEBUG] User ID:', userId);
+
       if (!userId) {
+        console.log('[DEBUG] No userId, redirecting to login');
         return res.redirect('/auth/login');
       }
 
+      console.log('[DEBUG] Calling findByUser...');
       const insights = await this.aiInsightService.findByUser(userId, {
         dismissed: false,
         limit: 100,
       });
+      console.log('[DEBUG] Got insights:', insights.length);
 
+      console.log('[DEBUG] Calling getCooldownInfo...');
       const cooldownInfo = await this.aiInsightService.getCooldownInfo(userId);
+      console.log('[DEBUG] Got cooldownInfo:', cooldownInfo);
 
       // Format timestamps for display
       const formattedInsights = insights.map((insight) => ({
         ...insight,
         created_at_display: this.formatTimeAgo(new Date(insight.created_at)),
       }));
+
+      console.log('[DEBUG] About to render view');
 
       res.render('ai-insights/index', {
         insights: formattedInsights,
@@ -45,8 +54,16 @@ export class AIInsightUIController {
           ? this.formatTimeAgo(new Date(cooldownInfo.lastGenerated))
           : null,
         activePage: 'ai-insights',
+        session: req.session,
       });
+
+      console.log('[DEBUG] View rendered successfully');
     } catch (err) {
+      console.log('[ERROR] Exception caught:', err);
+      logger.error('Error in AIInsightUIController.list', {
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined
+      });
       next(err);
     }
   }

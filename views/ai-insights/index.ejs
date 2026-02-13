@@ -1,180 +1,24 @@
 <div class="space-y-6">
-  <!-- Header -->
-  <div class="flex justify-between items-center mb-8">
-    <div>
-      <h1 class="text-3xl font-bold text-slate-900 mb-2">AI Insights</h1>
-      <% if (lastGenerated) { %>
-        <p class="text-sm text-slate-500">Last updated <%= lastGenerated %></p>
-      <% } %>
-    </div>
-    <form method="POST" action="/ai-insights/generate" class="inline">
-      <button
-        type="submit"
-        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed font-semibold"
-        <%= canGenerate ? '' : 'disabled' %>
-      >
-        <% if (canGenerate) { %>
-          Generate New Insights
-        <% } else { %>
-          Available in <%= hoursUntilAvailable %> hour<%= hoursUntilAvailable > 1 ? 's' : '' %>
-        <% } %>
-      </button>
-    </form>
-  </div>
+  <h1 class="text-3xl font-bold">AI Insights</h1>
+  <p>Insights found: <%= insights.length %></p>
+  <p>Can generate: <%= canGenerate %></p>
 
-  <!-- Flash Messages -->
-  <% if (typeof session !== 'undefined' && session.flash) { %>
-    <div class="mb-6 p-4 rounded-lg <%= session.flash.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : session.flash.type === 'warning' ? 'bg-yellow-50 border border-yellow-200 text-yellow-700' : 'bg-red-50 border border-red-200 text-red-700' %>">
-      <%= session.flash.message %>
-    </div>
-  <% } %>
+  <form method="POST" action="/ai-insights/generate">
+    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded" <% if (!canGenerate) { %>disabled<% } %>>
+      Generate Insights
+    </button>
+  </form>
 
-  <!-- Type Filter -->
-  <div class="mb-6">
-    <label for="type-filter" class="block text-sm font-medium text-slate-700 mb-2">Filter by Type</label>
-    <select
-      id="type-filter"
-      class="w-full md:w-48 border border-slate-300 rounded-lg px-4 py-2 bg-white text-slate-900 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-    >
-      <option value="">All Types</option>
-      <option value="Optimization">Optimization</option>
-      <option value="Income Idea">Income Idea</option>
-      <option value="Pattern Recognition">Pattern Recognition</option>
-      <option value="Anomaly">Anomaly</option>
-      <option value="Recommendation">Recommendation</option>
-      <option value="Risk">Risk</option>
-    </select>
-  </div>
-
-  <!-- Insights Grid -->
-  <div class="space-y-4">
-    <% if (insights.length === 0) { %>
-      <!-- Empty State -->
-      <div class="bg-white p-12 rounded-lg shadow text-center border border-slate-200">
-        <div class="mb-4">
-          <svg class="w-16 h-16 mx-auto text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-          </svg>
-        </div>
-        <p class="text-slate-600 text-lg">No insights yet.</p>
-        <p class="text-slate-500 text-sm mt-2">Click "Generate New Insights" to analyze your CRM data.</p>
-      </div>
+  <div>
+    <% if (insights.length > 0) { %>
+      <h2>Your Insights:</h2>
+      <ul>
+        <% insights.forEach(insight => { %>
+          <li><strong><%= insight.type %></strong> (<%= insight.confidence %>): <%= insight.content %></li>
+        <% }) %>
+      </ul>
     <% } else { %>
-      <!-- Insight Cards -->
-      <% insights.forEach(insight => { %>
-        <%
-          const borderColorMap = {
-            'Optimization': 'border-l-blue-500',
-            'Income Idea': 'border-l-green-500',
-            'Pattern Recognition': 'border-l-yellow-500',
-            'Anomaly': 'border-l-red-500',
-            'Recommendation': 'border-l-purple-500',
-            'Risk': 'border-l-orange-500'
-          };
-
-          const badgeBgMap = {
-            'Optimization': 'bg-blue-100 text-blue-800',
-            'Income Idea': 'bg-green-100 text-green-800',
-            'Pattern Recognition': 'bg-yellow-100 text-yellow-800',
-            'Anomaly': 'bg-red-100 text-red-800',
-            'Recommendation': 'bg-purple-100 text-purple-800',
-            'Risk': 'bg-orange-100 text-orange-800'
-          };
-
-          const borderColor = borderColorMap[insight.type] || 'border-l-slate-500';
-          const badgeBg = badgeBgMap[insight.type] || 'bg-slate-100 text-slate-800';
-          const confidencePercent = Math.round(insight.confidence * 100);
-        %>
-
-        <div class="bg-white p-6 rounded-lg shadow border-l-4 <%= borderColor %> hover:shadow-md transition-shadow">
-          <!-- Header Row -->
-          <div class="flex justify-between items-start mb-4">
-            <div class="flex items-center gap-3">
-              <!-- Type Badge -->
-              <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider <%= badgeBg %>">
-                <%= insight.type %>
-              </span>
-
-              <!-- Confidence Score -->
-              <div class="flex items-center gap-2">
-                <span class="text-xs text-slate-600 font-medium">Confidence:</span>
-                <div class="w-24 bg-slate-200 rounded-full h-2">
-                  <div
-                    class="<%= insight.confidence >= 0.7 ? 'bg-green-500' : insight.confidence >= 0.5 ? 'bg-yellow-500' : 'bg-red-500' %> h-2 rounded-full transition-all"
-                    style="width: <%= confidencePercent %>%"
-                  ></div>
-                </div>
-                <span class="text-xs font-semibold text-slate-700 w-8 text-right"><%= confidencePercent %>%</span>
-              </div>
-            </div>
-
-            <!-- Dismiss Button -->
-            <form method="POST" action="/ai-insights/<%= insight.id %>/dismiss" class="inline">
-              <button
-                type="submit"
-                class="text-slate-400 hover:text-slate-600 transition-colors p-1"
-                title="Dismiss this insight"
-              >
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                </svg>
-              </button>
-            </form>
-          </div>
-
-          <!-- Content -->
-          <p class="text-slate-800 leading-relaxed mb-4">
-            <%= insight.content %>
-          </p>
-
-          <!-- Timestamp -->
-          <p class="text-xs text-slate-400">
-            Generated <%= insight.created_at_display %>
-          </p>
-        </div>
-      <% }) %>
+      <p>No insights yet</p>
     <% } %>
   </div>
 </div>
-
-<!-- Loading Modal (shown during generation) -->
-<div id="loading-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-  <div class="bg-white p-8 rounded-lg shadow-lg">
-    <div class="flex flex-col items-center">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-      <p class="text-slate-700 font-semibold">Analyzing your data...</p>
-      <p class="text-sm text-slate-500 mt-2">This may take 30-60 seconds</p>
-    </div>
-  </div>
-</div>
-
-<script>
-  // Show loading modal when form is submitted
-  document.querySelector('form[action="/ai-insights/generate"]')?.addEventListener('submit', function() {
-    document.getElementById('loading-modal').classList.remove('hidden');
-  });
-
-  // Handle type filter
-  document.getElementById('type-filter').addEventListener('change', function() {
-    const selectedType = this.value;
-    const cards = document.querySelectorAll('[class*="border-l-"]');
-
-    cards.forEach(card => {
-      if (selectedType === '') {
-        card.closest('.bg-white')?.style.display = 'block';
-      } else {
-        const typeText = card.querySelector('span.font-bold')?.textContent.trim();
-        const typeMap = {
-          'Optimization': 'OPTIMIZATION',
-          'Income Idea': 'INCOME IDEA',
-          'Pattern Recognition': 'PATTERN RECOGNITION',
-          'Anomaly': 'ANOMALY',
-          'Recommendation': 'RECOMMENDATION',
-          'Risk': 'RISK'
-        };
-
-        card.closest('.bg-white')?.style.display = typeMap[selectedType] === typeText ? 'block' : 'none';
-      }
-    });
-  });
-</script>
