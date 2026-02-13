@@ -25,14 +25,28 @@ export class AIInsightUIController {
         return res.redirect('/auth/login');
       }
 
-      // Render with empty data first - no service calls
+      // Fetch real insights from database
+      const insights = await this.aiInsightService.findByUser(userId, {
+        dismissed: false,
+        limit: 100
+      });
+
+      // Get cooldown info
+      const cooldownInfo = await this.aiInsightService.getCooldownInfo(userId);
+
       res.render('ai-insights/index', {
         title: 'AI Insights',
         pageTitle: 'AI Insights',
-        insights: [],
-        canGenerate: true,
-        hoursUntilAvailable: 0,
-        lastGenerated: null,
+        insights: insights.map(insight => ({
+          id: insight.id,
+          type: insight.type,
+          confidence: Math.round(insight.confidence * 100),
+          content: insight.content,
+          createdAt: this.formatTimeAgo(new Date(insight.created_at))
+        })),
+        canGenerate: cooldownInfo.canGenerate,
+        hoursUntilAvailable: cooldownInfo.hoursUntilAvailable,
+        lastGenerated: cooldownInfo.lastGenerated ? this.formatTimeAgo(new Date(cooldownInfo.lastGenerated)) : null,
         activePage: 'ai-insights',
         session: req.session,
       });

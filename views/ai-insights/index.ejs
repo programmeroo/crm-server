@@ -1,24 +1,136 @@
-<div class="space-y-6">
-  <h1 class="text-3xl font-bold">AI Insights</h1>
-  <p>Insights found: <%= insights.length %></p>
-  <p>Can generate: <%= canGenerate %></p>
+<div class="space-y-8">
+  <!-- Header Section -->
+  <div class="flex justify-between items-start">
+    <div>
+      <h1 class="text-3xl font-bold text-slate-900 mb-2">AI Insights</h1>
+      <p class="text-slate-600">Analyze your CRM data and discover actionable patterns</p>
+    </div>
+  </div>
 
-  <form method="POST" action="/ai-insights/generate">
-    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded" <% if (!canGenerate) { %>disabled<% } %>>
-      Generate Insights
-    </button>
-  </form>
+  <!-- Generate Button Section -->
+  <div class="bg-white rounded-lg shadow p-6 border border-slate-200">
+    <div class="flex justify-between items-center">
+      <div>
+        <h3 class="text-lg font-semibold text-slate-900 mb-1">Generate New Insights</h3>
+        <p class="text-sm text-slate-600">
+          <% if (canGenerate) { %>
+            Ready to analyze your data. Click generate to get AI-powered insights.
+          <% } else { %>
+            Last generated <%= lastGenerated %> · Available in <%= hoursUntilAvailable %> hour<%= hoursUntilAvailable !== 1 ? 's' : '' %>
+          <% } %>
+        </p>
+      </div>
+      <form method="POST" action="/ai-insights/generate" class="flex-shrink-0">
+        <button
+          type="submit"
+          class="btn-primary <% if (!canGenerate) { %>opacity-50 cursor-not-allowed<% } %>"
+          <% if (!canGenerate) { %>disabled<% } %>
+        >
+          <% if (!canGenerate) { %>
+            <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          <% } else { %>
+            <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          <% } %>
+          <span><% if (!canGenerate) { %>Available in <%= hoursUntilAvailable %>h<% } else { %>Generate Insights<% } %></span>
+        </button>
+      </form>
+    </div>
+  </div>
 
-  <div>
+  <!-- Insights Grid -->
+  <div class="space-y-4">
     <% if (insights.length > 0) { %>
-      <h2>Your Insights:</h2>
-      <ul>
-        <% insights.forEach(insight => { %>
-          <li><strong><%= insight.type %></strong> (<%= insight.confidence %>): <%= insight.content %></li>
+      <h2 class="text-xl font-semibold text-slate-900"><%= insights.length %> Insight<%= insights.length !== 1 ? 's' : '' %> Found</h2>
+      <div class="space-y-4">
+        <%
+          const typeBadges = {
+            'Optimization': { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200' },
+            'Income Idea': { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-200' },
+            'Pattern Recognition': { bg: 'bg-purple-100', text: 'text-purple-800', border: 'border-purple-200' },
+            'Anomaly': { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-200' },
+            'Recommendation': { bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-200' },
+            'Risk': { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-200' }
+          };
+        %>
+        <% insights.forEach(insight => {
+          const badge = typeBadges[insight.type] || { bg: 'bg-slate-100', text: 'text-slate-800', border: 'border-slate-200' };
+        %>
+          <div class="bg-white rounded-lg shadow-sm hover:shadow border border-slate-200 p-6 transition-shadow">
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex items-center gap-3 flex-1">
+                <span class="<%= badge.bg %> <%= badge.text %> text-sm font-semibold px-3 py-1 rounded-full border <%= badge.border %>">
+                  <%= insight.type %>
+                </span>
+              </div>
+              <form method="POST" action="/ai-insights/<%= insight.id %>/dismiss" style="display: inline;">
+                <button
+                  type="submit"
+                  class="text-slate-400 hover:text-slate-600 transition-colors p-2"
+                  title="Dismiss this insight"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </form>
+            </div>
+
+            <p class="text-slate-900 mb-4 leading-relaxed"><%= insight.content %></p>
+
+            <div class="space-y-2">
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-slate-600">Confidence</span>
+                <span class="font-semibold text-slate-900"><%= insight.confidence %>%</span>
+              </div>
+              <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                <div
+                  class="<% if (insight.confidence >= 80) { %>bg-green-500<% } else if (insight.confidence >= 60) { %>bg-amber-500<% } else { %>bg-slate-400<% } %> h-full rounded-full transition-all"
+                  style="width: <%= insight.confidence %>%"
+                ></div>
+              </div>
+            </div>
+
+            <p class="text-xs text-slate-500 mt-4">Generated <%= insight.createdAt %></p>
+          </div>
         <% }) %>
-      </ul>
+      </div>
     <% } else { %>
-      <p>No insights yet</p>
+      <div class="bg-slate-50 rounded-lg border-2 border-dashed border-slate-300 p-12 text-center">
+        <svg class="w-12 h-12 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+        </svg>
+        <h3 class="text-lg font-semibold text-slate-900 mb-2">No Insights Yet</h3>
+        <p class="text-slate-600 mb-6">Click "Generate Insights" to analyze your CRM data and discover patterns.</p>
+      </div>
     <% } %>
   </div>
 </div>
+
+<style>
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.375rem;
+    background-color: #3b82f6;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 500;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: background-color 0.2s;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background-color: #1d4ed8;
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+</style>
