@@ -33,11 +33,29 @@ export class ListController {
     this.router = Router();
     this.router.use(requireLogin);
     // More specific routes must come BEFORE less specific ones
+    this.router.get('/by-workspace/:workspaceId', this.getByWorkspace.bind(this));
     this.router.post('/assign/set-primary', this.setPrimary.bind(this));
     this.router.post('/assign', this.assign.bind(this));
     this.router.delete('/assign', this.removeAssignment.bind(this));
     this.router.post('/', this.create.bind(this));
     this.router.delete('/:id', this.delete.bind(this));
+  }
+
+  private async getByWorkspace(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId as string, 10);
+      if (isNaN(workspaceId)) {
+        throw new AppError('VALIDATION_ERROR', 'Invalid workspace ID', 400);
+      }
+
+      const userId = (req.session as any).userId!;
+      await this.verifyWorkspaceAccess(workspaceId, userId);
+
+      const lists = await this.listService.getListsByWorkspace(workspaceId);
+      res.json({ data: lists, error: null });
+    } catch (err) {
+      next(err);
+    }
   }
 
   private async verifyWorkspaceAccess(workspaceId: number, userId: number): Promise<void> {
