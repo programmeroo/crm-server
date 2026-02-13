@@ -37,6 +37,7 @@ export class ListController {
     this.router.post('/assign/set-primary', this.setPrimary.bind(this));
     this.router.post('/assign', this.assign.bind(this));
     this.router.delete('/assign', this.removeAssignment.bind(this));
+    this.router.get('/:id', this.getById.bind(this));
     this.router.post('/', this.create.bind(this));
     this.router.delete('/:id', this.delete.bind(this));
   }
@@ -53,6 +54,31 @@ export class ListController {
 
       const lists = await this.listService.getListsByWorkspace(workspaceId);
       res.json({ data: lists, error: null });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  private async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const listId = parseInt(req.params.id as string, 10);
+      if (isNaN(listId)) {
+        throw new AppError('VALIDATION_ERROR', 'Invalid list ID', 400);
+      }
+
+      const list = await this.listService.findById(listId);
+      if (!list) {
+        throw new AppError('NOT_FOUND', 'List not found', 404);
+      }
+
+      // For now, return 0 contact count (can be enhanced later with proper counting)
+      res.json({
+        data: {
+          ...list,
+          contactCount: 0
+        },
+        error: null
+      });
     } catch (err) {
       next(err);
     }
